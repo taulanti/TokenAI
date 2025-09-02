@@ -35,9 +35,9 @@ contract MintTestTokens is Script {
         
         // Mint some TokenAI to test accounts for fees
         console.log("\n=== MINTING TOKENAI FOR FEES ===");
-        tokenAI.mint(testAccount1, 1000 * 10**18); // 1000 APT
-        tokenAI.mint(testAccount2, 1000 * 10**18); // 1000 APT
-        console.log("Minted 1000 tAPT to each test account");
+        tokenAI.mint(testAccount1, 1000 * 10**18); // 1000 TAI
+        tokenAI.mint(testAccount2, 1000 * 10**18); // 1000 TAI
+        console.log("Minted 1000 tTAI to each test account");
         
         // Mint different types of LLMBits tokens
         console.log("\n=== MINTING LLMBITS TOKENS ===");
@@ -112,12 +112,12 @@ contract MintTestTokens is Script {
         // Display summary
         console.log("\n=== MINTING SUMMARY ===");
         console.log("Test Account 1 Holdings:");
-        console.log("- TokenAI Balance:", tokenAI.balanceOf(testAccount1) / 10**18, "tAPT");
+        console.log("- TokenAI Balance:", tokenAI.balanceOf(testAccount1) / 10**18, "tTAI");
         console.log("- GPT-4 AI Course (ID", tokenId1, "):", llmBits.balanceOf(testAccount1, tokenId1));
         console.log("- Claude ML Course (ID", tokenId2, "):", llmBits.balanceOf(testAccount1, tokenId2));
         
         console.log("\nTest Account 2 Holdings:");
-        console.log("- TokenAI Balance:", tokenAI.balanceOf(testAccount2) / 10**18, "tAPT");
+        console.log("- TokenAI Balance:", tokenAI.balanceOf(testAccount2) / 10**18, "tTAI");
         console.log("- GPT-4 Web3 Course (ID", tokenId3, "):", llmBits.balanceOf(testAccount2, tokenId3));
         console.log("- GPT-3.5 Non-tradable (ID", tokenId4, "):", llmBits.balanceOf(testAccount2, tokenId4));
         

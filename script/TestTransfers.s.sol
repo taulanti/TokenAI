@@ -40,14 +40,14 @@ contract TestTransfers is Script {
         // Test 1: Simple transfer with native fee
         console.log("\n=== TEST 1: SIMPLE TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 50 GPT-4 AI Course tokens from Account 1 to Account 2");
-        console.log("Fee: 5 tAPT");
+        console.log("Fee: 5 tTAI");
         
         llmBits.transfer(
             testAccount1,
             testAccount2,
             gptAiCourseId,
             50,              // amount
-            5 * 10**18,      // 5 tAPT native fee
+            5 * 10**18,      // 5 tTAI native fee
             0                // no in-kind fee
         );
         
@@ -84,8 +84,8 @@ contract TestTransfers is Script {
         amounts[1] = 10; // 10 to deployer
         
         uint256[] memory feesNative = new uint256[](2);
-        feesNative[0] = 2 * 10**18; // 2 tAPT fee for Account 2 transfer
-        feesNative[1] = 1 * 10**18; // 1 tAPT fee for deployer transfer
+        feesNative[0] = 2 * 10**18; // 2 tTAI fee for Account 2 transfer
+        feesNative[1] = 1 * 10**18; // 1 tTAI fee for deployer transfer
         
         uint256[] memory feesInKind = new uint256[](2);
         feesInKind[0] = 0;
@@ -145,7 +145,7 @@ contract TestTransfers is Script {
         // Final summary
         console.log("\n=== FINAL TREASURY SUMMARY ===");
         address treasury = llmBits.treasury();
-        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tAPT");
+        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tTAI");
         console.log("Treasury GPT-4 AI Course tokens:", llmBits.balanceOf(treasury, gptAiCourseId));
         console.log("Treasury Claude ML tokens:", llmBits.balanceOf(treasury, claudeMlCourseId));
     }
@@ -159,12 +159,12 @@ contract TestTransfers is Script {
         uint256 tokenId2
     ) internal view {
         console.log("Account 1:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tAPT");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account1, tokenId1));
         console.log("  - Claude ML Course tokens:", llmBits.balanceOf(account1, tokenId2));
         
         console.log("Account 2:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tAPT");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account2, tokenId1));
         console.log("  - Claude ML Course tokens:", llmBits.balanceOf(account2, tokenId2));
     }

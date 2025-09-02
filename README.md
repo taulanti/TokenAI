@@ -17,7 +17,7 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
 ### TokenAI Contract
 - **Standard**: ERC20 with extensions
 - **Features**: Mintable, Burnable, Pausable, Role-based minting
-- **Symbol**: APT (mainnet) / tAPT (testnet)
+- **Symbol**: TAI (mainnet) / tTAI (testnet)
 - **Supply**: Dynamic (minted as needed)
 
 ### LLMBits Contract  

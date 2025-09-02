@@ -41,15 +41,15 @@ contract TestTrading is Script {
         // Test 1: Trade with native fees (TokenAI)
         console.log("\n=== TEST 1: TRADE WITH NATIVE FEES ===");
         console.log("Account 1 trades 100 GPT-4 AI Course tokens for 50 GPT-4 Web3 Course tokens from Account 2");
-        console.log("Native fees: 10 tAPT from Account 1, 5 tAPT from Account 2");
+        console.log("Native fees: 10 tTAI from Account 1, 5 tTAI from Account 2");
         
         llmBits.tradeWithNativeFees(
             testAccount1, testAccount2,
             gptAiCourseId, 100,        // Account 1 gives 100 AI course tokens
             gptWeb3CourseId, 50,       // Account 2 gives 50 Web3 course tokens
             0,                         // No in-kind fee for Account 1
-            10 * 10**18,              // 10 tAPT fee from Account 1
-            5 * 10**18                // 5 tAPT fee from Account 2
+            10 * 10**18,              // 10 tTAI fee from Account 1
+            5 * 10**18                // 5 tTAI fee from Account 2
         );
         
         console.log("\n=== AFTER TRADE 1 ===");
@@ -76,7 +76,7 @@ contract TestTrading is Script {
         // Check treasury balances
         address treasury = llmBits.treasury();
         console.log("\n=== TREASURY EARNINGS ===");
-        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tAPT");
+        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tTAI");
         console.log("Treasury GPT-4 AI Course tokens:", llmBits.balanceOf(treasury, gptAiCourseId));
         console.log("Treasury GPT-4 Web3 Course tokens:", llmBits.balanceOf(treasury, gptWeb3CourseId));
     }
@@ -90,12 +90,12 @@ contract TestTrading is Script {
         uint256 tokenId2
     ) internal view {
         console.log("Account 1:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tAPT");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account1, tokenId1));
         console.log("  - GPT-4 Web3 Course tokens:", llmBits.balanceOf(account1, tokenId2));
         
         console.log("Account 2:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tAPT");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account2, tokenId1));
         console.log("  - GPT-4 Web3 Course tokens:", llmBits.balanceOf(account2, tokenId2));
     }

@@ -86,7 +86,7 @@ forge script script/MintTestTokens.s.sol:MintTestTokens \
 ```
 
 This script will:
-- Mint 1000 tAPT to each test account for fees
+- Mint 1000 tTAI to each test account for fees
 - Create various LLMBits token types (tradable/non-tradable)
 - Distribute tokens for testing trading and transfers
 
@@ -99,7 +99,7 @@ forge script script/TestTransfers.s.sol:TestTransfers \
 ```
 
 Tests:
-- Simple transfers with native fees (tAPT)
+- Simple transfers with native fees (tTAI)
 - Transfers with in-kind fees (LLMBits tokens)
 - Batch transfers to multiple recipients
 - Non-tradable token restrictions
@@ -134,7 +134,7 @@ Tests:
 
 #### TokenAI Settings
 - **Name**: AI Platform Token (Testnet)
-- **Symbol**: tAPT
+- **Symbol**: tTAI
 - **Initial Supply**: 0 (tokens minted as needed)
 - **Decimals**: 18
 - **Features**: Mintable, Burnable, Pausable, Role-based access

@@ -33,7 +33,7 @@ contract DeployLLMBits is Script {
         // Verify TokenAI exists at treasury address
         TokenAI tokenAI = TokenAI(treasuryAddress);
         require(
-            keccak256(abi.encodePacked(tokenAI.symbol())) == keccak256(abi.encodePacked("APT")),
+            keccak256(abi.encodePacked(tokenAI.symbol())) == keccak256(abi.encodePacked("TAI")),
             "Invalid TokenAI address - symbol mismatch"
         );
         console.log("TokenAI verified at:", treasuryAddress);

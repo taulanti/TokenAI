@@ -15,7 +15,7 @@ contract DeployTokenAI is Script {
     
     // Platform configuration
     string public constant TOKEN_NAME = "AI Platform Token";
-    string public constant TOKEN_SYMBOL = "APT";
+    string public constant TOKEN_SYMBOL = "TAI";
     
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -67,7 +67,7 @@ contract DeployTokenAI is Script {
 contract DeployTokenAITestnet is Script {
     
     string public constant TOKEN_NAME = "AI Platform Token Testnet";
-    string public constant TOKEN_SYMBOL = "tAPT";
+    string public constant TOKEN_SYMBOL = "tTAI";
     
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
