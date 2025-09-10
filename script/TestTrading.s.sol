@@ -55,17 +55,18 @@ contract TestTrading is Script {
         console.log("\n=== AFTER TRADE 1 ===");
         _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, gptWeb3CourseId);
         
-        // Test 2: Trade with in-kind fees (LLMBits tokens)
-        console.log("\n=== TEST 2: TRADE WITH IN-KIND FEES ===");
+        // Test 2: Second trade with native fees only
+        console.log("\n=== TEST 2: SECOND TRADE WITH NATIVE FEES ===");
         console.log("Account 2 trades 30 Web3 tokens for 50 AI Course tokens from Account 1");
-        console.log("In-kind fees: 5 AI Course tokens from Account 1, 3 Web3 tokens from Account 2");
+        console.log("Native fees: 3 tTAI from Account 2, 5 tTAI from Account 1");
         
-        llmBits.tradeWithLLMFees(
+        llmBits.tradeWithNativeFees(
             testAccount2, testAccount1,
             gptWeb3CourseId, 30,       // Account 2 gives 30 Web3 tokens
             gptAiCourseId, 50,         // Account 1 gives 50 AI course tokens
-            3,                         // 3 Web3 tokens as fee from Account 2
-            5                          // 5 AI course tokens as fee from Account 1
+            0,                         // No match mask
+            3 * 10**18,               // 3 tTAI fee from Account 2
+            5 * 10**18                // 5 tTAI fee from Account 1
         );
         
         console.log("\n=== AFTER TRADE 2 ===");
@@ -77,8 +78,6 @@ contract TestTrading is Script {
         address treasury = llmBits.treasury();
         console.log("\n=== TREASURY EARNINGS ===");
         console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tTAI");
-        console.log("Treasury GPT-4 AI Course tokens:", llmBits.balanceOf(treasury, gptAiCourseId));
-        console.log("Treasury GPT-4 Web3 Course tokens:", llmBits.balanceOf(treasury, gptWeb3CourseId));
     }
     
     function _displayBalances(
