@@ -47,25 +47,23 @@ contract TestTransfers is Script {
             testAccount2,
             gptAiCourseId,
             50,              // amount
-            5 * 10**18,      // 5 tTAI native fee
-            0                // no in-kind fee
+            5 * 10**18       // 5 tTAI native fee
         );
         
         console.log("\n=== AFTER TRANSFER 1 ===");
         _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
         
-        // Test 2: Transfer with in-kind fee
-        console.log("\n=== TEST 2: TRANSFER WITH IN-KIND FEE ===");
+        // Test 2: Transfer with native fee only
+        console.log("\n=== TEST 2: TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 25 Claude ML tokens from Account 1 to Account 2");
-        console.log("Fee: 2 Claude ML tokens");
+        console.log("Fee: 2 tTAI");
         
         llmBits.transfer(
             testAccount1,
             testAccount2,
             claudeMlCourseId,
             25,              // amount
-            0,               // no native fee
-            2                // 2 tokens in-kind fee
+            2 * 10**18       // 2 tTAI native fee
         );
         
         console.log("\n=== AFTER TRANSFER 2 ===");
@@ -87,17 +85,12 @@ contract TestTransfers is Script {
         feesNative[0] = 2 * 10**18; // 2 tTAI fee for Account 2 transfer
         feesNative[1] = 1 * 10**18; // 1 tTAI fee for deployer transfer
         
-        uint256[] memory feesInKind = new uint256[](2);
-        feesInKind[0] = 0;
-        feesInKind[1] = 0;
-        
         llmBits.batchTransfer(
             testAccount1,
             recipients,
             gptAiCourseId,
             amounts,
-            feesNative,
-            feesInKind
+            feesNative
         );
         
         console.log("\n=== AFTER BATCH TRANSFER ===");
@@ -113,7 +106,6 @@ contract TestTransfers is Script {
             testAccount1,
             nonTradableId,
             10,
-            0,
             0
         ) {
             console.log("ERROR: Non-tradable transfer succeeded (should have failed)");
@@ -133,8 +125,7 @@ contract TestTransfers is Script {
             testAccount1,    // to Account 1
             instructorPoolId,
             50,              // amount
-            0,               // no native fee
-            0                // no in-kind fee
+            0                // no native fee
         );
         
         console.log("Transferred 50 instructor pool tokens to Account 1");

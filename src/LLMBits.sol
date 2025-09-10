@@ -109,15 +109,6 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         address indexed treasury
     );
 
-    event FeeAppliedInKind(
-        address indexed partyA,
-        address indexed partyB,
-        uint256 idA,
-        uint256 feeA,
-        uint256 idB,
-        uint256 feeB,
-        address indexed treasury
-    );
 
     /*──────────────────────── Constructor ─────────────────────────*/
 
@@ -320,14 +311,12 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         address to,
         uint256 id,
         uint256 amount,
-        uint256 feeNative,
-        uint256 feeInKind
+        uint256 feeNative
     ) external onlyOwner whenNotPaused nonReentrant {
         _validateTransferRules(from, id);
 
         uint256 bal = balanceOf(from, id);
-        uint256 required = amount + feeInKind;
-        if (bal < required) revert InsufficientBalance(from, id, required, bal);
+        if (bal < amount) revert InsufficientBalance(from, id, amount, bal);
 
         // Native fee (TokenAI)
         if (feeNative > 0) {
@@ -344,20 +333,6 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
             emit FeeAppliedNative(from, address(0), feeNative, 0, treasury);
         }
 
-        // In-kind fee
-        if (feeInKind > 0) {
-            _safeTransferFrom(from, treasury, id, feeInKind, "");
-            emit FeeAppliedInKind(
-                from,
-                address(0),
-                id,
-                feeInKind,
-                0,
-                0,
-                treasury
-            );
-        }
-
         _singleTransfer(from, to, id, amount);
     }
 
@@ -370,27 +345,23 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         address[] calldata recipients,
         uint256 id,
         uint256[] calldata amounts,
-        uint256[] calldata feesNative,
-        uint256[] calldata feesInKind
+        uint256[] calldata feesNative
     ) external onlyOwner whenNotPaused nonReentrant {
         uint256 len = recipients.length;
         if (
             len == 0 ||
             amounts.length != len ||
-            feesNative.length != len ||
-            feesInKind.length != len
+            feesNative.length != len
         ) revert ArrayLengthMismatch();
 
         _validateTransferRules(from, id);
 
         uint256 totalAmount;
-        uint256 totalFeeInKind;
         uint256 totalFeeNative;
 
         for (uint256 i; i < len; ) {
             if (recipients[i] == address(0)) revert ZeroAddress();
             totalAmount += amounts[i];
-            totalFeeInKind += feesInKind[i];
             totalFeeNative += feesNative[i];
             unchecked {
                 ++i;
@@ -398,8 +369,7 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         }
 
         uint256 bal = balanceOf(from, id);
-        uint256 required = totalAmount + totalFeeInKind;
-        if (bal < required) revert InsufficientBalance(from, id, required, bal);
+        if (bal < totalAmount) revert InsufficientBalance(from, id, totalAmount, bal);
 
         // Handle native fees in batch
         if (totalFeeNative > 0) {
@@ -413,11 +383,6 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
                 );
             tokenAi.burnFrom(from, totalFeeNative);
             tokenAi.mint(treasury, totalFeeNative);
-        }
-
-        // Handle in-kind fees in batch
-        if (totalFeeInKind > 0) {
-            _safeTransferFrom(from, treasury, id, totalFeeInKind, "");
         }
 
         // Perform actual transfers
@@ -434,17 +399,6 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
                 from,
                 address(0),
                 totalFeeNative,
-                0,
-                treasury
-            );
-        }
-        if (totalFeeInKind > 0) {
-            emit FeeAppliedInKind(
-                from,
-                address(0),
-                id,
-                totalFeeInKind,
-                0,
                 0,
                 treasury
             );
@@ -539,52 +493,6 @@ contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function tradeWithLLMFees(
-        address partyA,
-        address partyB,
-        uint256 idA,
-        uint256 amountA,
-        uint256 idB,
-        uint256 amountB,
-        uint8 matchMask,
-        uint256 feeAInIdA,
-        uint256 feeBInIdB
-    ) external onlyOwner whenNotPaused nonReentrant {
-        if (partyA == address(0) || partyB == address(0)) revert ZeroAddress();
-
-        _validateTransferRules(partyA, idA);
-        TokenConfigs memory cfgA = tokenConfigs[idA];
-        uint256 balA = balanceOf(partyA, idA);
-        if (balA < amountA + feeAInIdA)
-            revert InsufficientBalance(partyA, idA, amountA + feeAInIdA, balA);
-
-        _validateTransferRules(partyB, idB);
-        TokenConfigs memory cfgB = tokenConfigs[idB];
-        uint256 balB = balanceOf(partyB, idB);
-        if (balB < amountB + feeBInIdB)
-            revert InsufficientBalance(partyB, idB, amountB + feeBInIdB, balB);
-
-        _validateMatchMask(cfgA, cfgB, matchMask);
-
-        if (feeAInIdA > 0)
-            _safeTransferFrom(partyA, treasury, idA, feeAInIdA, "");
-        if (feeBInIdB > 0)
-            _safeTransferFrom(partyB, treasury, idB, feeBInIdB, "");
-        if (feeAInIdA + feeBInIdB > 0) {
-            emit FeeAppliedInKind(
-                partyA,
-                partyB,
-                idA,
-                feeAInIdA,
-                idB,
-                feeBInIdB,
-                treasury
-            );
-        }
-
-        _singleTransfer(partyA, partyB, idA, amountA);
-        _singleTransfer(partyB, partyA, idB, amountB);
-    }
 
     /*──────────────────────── Burn & Remint ───────────────────────*/
 

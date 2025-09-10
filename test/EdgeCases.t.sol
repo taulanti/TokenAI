@@ -62,24 +62,26 @@ contract EdgeCasesTest is Test {
         feesNative[0] = 0;
         feesNative[1] = 0;
         
-        uint256[] memory feesInKind = new uint256[](2);
-        feesInKind[0] = 0;
-        feesInKind[1] = 0;
-        
         vm.prank(owner);
         // Should revert due to insufficient balance, not overflow
         vm.expectRevert();
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
     }
     
     function testFeeOverflowPrevention() public {
-        uint256 tokenId = _mintToken(user1, type(uint256).max);
+        uint256 tokenId = _mintToken(user1, 1000);
         
-        // Try maximum possible fees
+        // Give user1 limited TokenAI
         vm.prank(owner);
-        // Should revert due to insufficient balance for both amount and fee
+        tokenAI.mint(user1, 10 * 10**18);
+        
+        vm.prank(user1);
+        tokenAI.approve(address(llmBits), type(uint256).max);
+        
+        // Try excessive native fee
+        vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(user1, user2, tokenId, type(uint256).max - 1, 0, type(uint256).max);
+        llmBits.transfer(user1, user2, tokenId, 100, type(uint256).max); // Excessive native fee
     }
     
     function testTimestampUnderflowPrevention() public {
@@ -97,7 +99,7 @@ contract EdgeCasesTest is Test {
         // Transfers should fail
         vm.prank(owner);
         vm.expectRevert(LLMBits.TokenExpired.selector);
-        llmBits.transfer(user1, user2, tokenId, 100, 0, 0);
+        llmBits.transfer(user1, user2, tokenId, 100, 0);
     }
     
     /*─────────────────────── Access Control Edge Cases ───────────────────────*/
@@ -154,7 +156,7 @@ contract EdgeCasesTest is Test {
         
         // Transfer TO malicious contract - this will trigger the reentrant call
         vm.prank(owner);
-        llmBits.transfer(user1, address(maliciousContract), tokenId, 100, 0, 0);
+        llmBits.transfer(user1, address(maliciousContract), tokenId, 100, 0);
         
         // Check that reentrancy was attempted but blocked
         assertTrue(maliciousContract.attacked());
@@ -165,10 +167,17 @@ contract EdgeCasesTest is Test {
     function testExcessiveFeeAttack() public {
         uint256 tokenId = _mintToken(user1, 1000);
         
-        // Try to set fee larger than balance
+        // Give user1 some TokenAI but not enough for excessive fee
+        vm.prank(owner);
+        tokenAI.mint(user1, 5 * 10**18);
+        
+        vm.prank(user1);
+        tokenAI.approve(address(llmBits), 100 * 10**18); // Approve more than balance
+        
+        // Try to set fee larger than user's TokenAI balance
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(user1, user2, tokenId, 100, 0, 2000); // Fee > balance
+        llmBits.transfer(user1, user2, tokenId, 100, 100 * 10**18); // Excessive native fee
     }
     
     function testFeeRecipientManipulation() public {
@@ -192,10 +201,11 @@ contract EdgeCasesTest is Test {
         
         // Now fees go to attacker
         vm.prank(owner);
-        llmBits.transfer(user1, user2, tokenId, 100, 10 * 10**18, 5);
+        llmBits.transfer(user1, user2, tokenId, 100, 10 * 10**18);
         
         assertEq(tokenAI.balanceOf(attacker), 10 * 10**18);
-        assertEq(llmBits.balanceOf(attacker, tokenId), 5);
+        // No in-kind fees collected since we removed that feature
+        assertEq(llmBits.balanceOf(attacker, tokenId), 0);
     }
     
     /*─────────────────────── Token Configuration Attack Tests ───────────────────────*/
@@ -228,7 +238,7 @@ contract EdgeCasesTest is Test {
         // User should not be able to transfer
         vm.prank(owner);
         vm.expectRevert(LLMBits.TokenNotTradable.selector);
-        llmBits.transfer(user1, user2, tokenId, 100, 0, 0);
+        llmBits.transfer(user1, user2, tokenId, 100, 0);
         
         // But origin pool should be able to transfer
         vm.prank(owner);
@@ -237,7 +247,7 @@ contract EdgeCasesTest is Test {
         );
         
         vm.prank(owner);
-        llmBits.transfer(originPool, user1, tokenId, 100, 0, 0);
+        llmBits.transfer(originPool, user1, tokenId, 100, 0);
     }
     
     /*─────────────────────── Gas Limit Attack Tests ───────────────────────*/
@@ -256,12 +266,11 @@ contract EdgeCasesTest is Test {
             recipients[i] = makeAddr(string(abi.encodePacked("recipient", vm.toString(i))));
             amounts[i] = 1;
             feesNative[i] = 0;
-            feesInKind[i] = 0;
         }
         
         // Should handle large batch without running out of gas in test environment
         vm.prank(owner);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
         
         // Verify first and last recipients received tokens
         assertEq(llmBits.balanceOf(recipients[0], tokenId), 1);
@@ -390,11 +399,10 @@ contract EdgeCasesTest is Test {
         amounts[2] = 150;
         
         uint256[] memory feesNative = new uint256[](2);
-        uint256[] memory feesInKind = new uint256[](2);
         
         vm.prank(owner);
         vm.expectRevert(LLMBits.ArrayLengthMismatch.selector);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
     }
     
     /*─────────────────────── Helper Functions ───────────────────────*/
@@ -428,7 +436,7 @@ contract ReentrantReceiver {
         // Try to reenter during transfer
         if (!attacked) {
             attacked = true;
-            try llmBits.transfer(address(this), from, id, 50, 0, 0) {
+            try llmBits.transfer(address(this), from, id, 50, 0) {
                 // Reentrancy succeeded (should not happen)
             } catch {
                 // Reentrancy blocked (expected)

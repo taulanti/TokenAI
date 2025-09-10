@@ -47,15 +47,6 @@ contract LLMBitsTest is Test {
         address indexed treasury
     );
     
-    event FeeAppliedInKind(
-        address indexed partyA,
-        address indexed partyB,
-        uint256 idA,
-        uint256 feeA,
-        uint256 idB,
-        uint256 feeB,
-        address indexed treasury
-    );
     
     function setUp() public {
         owner = makeAddr("owner");
@@ -255,7 +246,6 @@ contract LLMBitsTest is Test {
         uint256 tokenId = _mintTokenToUser(user1, 1000);
         uint256 transferAmount = 300;
         uint256 feeNative = 10 * 10**18;
-        uint256 feeInKind = 50;
         
         // Give user1 some TokenAI for fees
         vm.prank(owner);
@@ -266,11 +256,10 @@ contract LLMBitsTest is Test {
         tokenAI.approve(address(llmBits), feeNative);
         
         vm.prank(owner);
-        llmBits.transfer(user1, user2, tokenId, transferAmount, feeNative, feeInKind);
+        llmBits.transfer(user1, user2, tokenId, transferAmount, feeNative);
         
-        assertEq(llmBits.balanceOf(user1, tokenId), 1000 - transferAmount - feeInKind);
+        assertEq(llmBits.balanceOf(user1, tokenId), 1000 - transferAmount);
         assertEq(llmBits.balanceOf(user2, tokenId), transferAmount);
-        assertEq(llmBits.balanceOf(treasury, tokenId), feeInKind);
         assertEq(tokenAI.balanceOf(treasury), feeNative);
     }
     
@@ -278,7 +267,7 @@ contract LLMBitsTest is Test {
         uint256 tokenId = _mintTokenToUser(originPool, 1000, false); // Non-tradable
         
         vm.prank(owner);
-        llmBits.transfer(originPool, user1, tokenId, 300, 0, 0);
+        llmBits.transfer(originPool, user1, tokenId, 300, 0);
         
         assertEq(llmBits.balanceOf(user1, tokenId), 300);
     }
@@ -288,7 +277,7 @@ contract LLMBitsTest is Test {
         
         vm.prank(owner);
         vm.expectRevert(LLMBits.TokenNotTradable.selector);
-        llmBits.transfer(user1, user2, tokenId, 300, 0, 0);
+        llmBits.transfer(user1, user2, tokenId, 300, 0);
     }
     
     function testTransferExpiredToken() public {
@@ -300,7 +289,7 @@ contract LLMBitsTest is Test {
         
         vm.prank(owner);
         vm.expectRevert(LLMBits.TokenExpired.selector);
-        llmBits.transfer(user1, user2, tokenId, 300, 0, 0);
+        llmBits.transfer(user1, user2, tokenId, 300, 0);
     }
     
     function testTransferInsufficientBalance() public {
@@ -308,7 +297,7 @@ contract LLMBitsTest is Test {
         
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(user1, user2, tokenId, 1500, 0, 0); // More than balance
+        llmBits.transfer(user1, user2, tokenId, 1500, 0); // More than balance
     }
     
     /*─────────────────────── Batch Transfer Tests ───────────────────────*/
@@ -331,11 +320,6 @@ contract LLMBitsTest is Test {
         feesNative[1] = 3 * 10**18;
         feesNative[2] = 2 * 10**18;
         
-        uint256[] memory feesInKind = new uint256[](3);
-        feesInKind[0] = 10;
-        feesInKind[1] = 15;
-        feesInKind[2] = 5;
-        
         // Give user1 TokenAI for fees
         uint256 totalNativeFees = 10 * 10**18;
         vm.prank(owner);
@@ -345,7 +329,7 @@ contract LLMBitsTest is Test {
         tokenAI.approve(address(llmBits), totalNativeFees);
         
         vm.prank(owner);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
         
         // Check balances
         assertEq(llmBits.balanceOf(recipients[0], tokenId), amounts[0]);
@@ -353,13 +337,11 @@ contract LLMBitsTest is Test {
         assertEq(llmBits.balanceOf(recipients[2], tokenId), amounts[2]);
         
         // Check fees collected
-        uint256 totalInKindFees = 30; // 10 + 15 + 5
-        assertEq(llmBits.balanceOf(treasury, tokenId), totalInKindFees);
         assertEq(tokenAI.balanceOf(treasury), totalNativeFees);
         
         // Check remaining balance
         uint256 totalTransferred = 600; // 300 + 200 + 100
-        assertEq(llmBits.balanceOf(user1, tokenId), 2000 - totalTransferred - totalInKindFees);
+        assertEq(llmBits.balanceOf(user1, tokenId), 2000 - totalTransferred);
     }
     
     function testBatchTransferArrayLengthMismatch() public {
@@ -375,11 +357,10 @@ contract LLMBitsTest is Test {
         amounts[2] = 150;
         
         uint256[] memory feesNative = new uint256[](2);
-        uint256[] memory feesInKind = new uint256[](2);
         
         vm.prank(owner);
         vm.expectRevert(LLMBits.ArrayLengthMismatch.selector);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
     }
     
     /*─────────────────────── Trading Tests ───────────────────────*/
@@ -421,31 +402,6 @@ contract LLMBitsTest is Test {
         assertEq(tokenAI.balanceOf(treasury), feeANative + feeBNative);
     }
     
-    function testTradeWithLLMFees() public {
-        // Create different token types for trading
-        vm.startPrank(owner);
-        uint256 tokenIdA = llmBits.mintToAddress(user1, originPool, MODEL, "course-a", expiration, RECLAIMABLE, TRADABLE, 1000);
-        uint256 tokenIdB = llmBits.mintToAddress(user2, originPool, MODEL, "course-b", expiration, RECLAIMABLE, TRADABLE, 800);
-        vm.stopPrank();
-        
-        uint256 amountA = 300;
-        uint256 amountB = 200;
-        uint256 feeAInIdA = 50;
-        uint256 feeBInIdB = 30;
-        
-        vm.prank(owner);
-        llmBits.tradeWithLLMFees(user1, user2, tokenIdA, amountA, tokenIdB, amountB, 0, feeAInIdA, feeBInIdB);
-        
-        // Check token swaps
-        assertEq(llmBits.balanceOf(user1, tokenIdA), 1000 - amountA - feeAInIdA);
-        assertEq(llmBits.balanceOf(user1, tokenIdB), amountB);
-        assertEq(llmBits.balanceOf(user2, tokenIdA), amountA);
-        assertEq(llmBits.balanceOf(user2, tokenIdB), 800 - amountB - feeBInIdB);
-        
-        // Check fees collected
-        assertEq(llmBits.balanceOf(treasury, tokenIdA), feeAInIdA);
-        assertEq(llmBits.balanceOf(treasury, tokenIdB), feeBInIdB);
-    }
     
     /*─────────────────────── Burn and Remint Tests ───────────────────────*/
     

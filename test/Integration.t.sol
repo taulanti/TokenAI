@@ -87,12 +87,11 @@ contract IntegrationTest is Test {
         tokenAI.approve(address(llmBits), usageFeeNative);
         
         vm.prank(owner);
-        llmBits.transfer(student1, platformUser, courseTokenId, usageAmount, usageFeeNative, usageFeeInKind);
+        llmBits.transfer(student1, platformUser, courseTokenId, usageAmount, usageFeeNative);
         
         // 4. Verify usage and fees
-        assertEq(llmBits.balanceOf(student1, courseTokenId), creditAmount - usageAmount - usageFeeInKind);
+        assertEq(llmBits.balanceOf(student1, courseTokenId), creditAmount - usageAmount);
         assertEq(llmBits.balanceOf(platformUser, courseTokenId), usageAmount);
-        assertEq(llmBits.balanceOf(treasury, courseTokenId), usageFeeInKind);
         assertEq(tokenAI.balanceOf(treasury), usageFeeNative);
     }
     
@@ -165,25 +164,20 @@ contract IntegrationTest is Test {
         feesNative[0] = 1 * 10**18;
         feesNative[1] = 1 * 10**18;
         
-        uint256[] memory feesInKind = new uint256[](2);
-        feesInKind[0] = 5;
-        feesInKind[1] = 5;
-        
         // Instructor approves platform tokens for fees
         vm.prank(instructor);
         tokenAI.approve(address(llmBits), 2 * 10**18);
         
         vm.prank(owner);
-        llmBits.batchTransfer(instructor, students, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(instructor, students, tokenId, amounts, feesNative);
         
         // 3. Verify distribution
         assertEq(llmBits.balanceOf(student1, tokenId), amounts[0]);
         assertEq(llmBits.balanceOf(student2, tokenId), amounts[1]);
-        assertEq(llmBits.balanceOf(treasury, tokenId), 10); // Total in-kind fees
         assertEq(tokenAI.balanceOf(treasury), 2 * 10**18); // Total native fees
         
         // 4. Verify instructor's remaining balance
-        uint256 expectedRemaining = totalCredits - amounts[0] - amounts[1] - 10; // Minus distribution and fees
+        uint256 expectedRemaining = totalCredits - amounts[0] - amounts[1]; // Minus distribution
         assertEq(llmBits.balanceOf(instructor, tokenId), expectedRemaining);
     }
     
@@ -216,8 +210,8 @@ contract IntegrationTest is Test {
         assertEq(config.expiration, newExpiration);
     }
     
-    function testCrossCourseInKindTrading() public {
-        // Scenario: Students trade credits from different courses using in-kind fees
+    function testCrossCourseNativeTrading() public {
+        // Scenario: Students trade credits from different courses using native fees
         uint64 expiration = uint64(block.timestamp + 60 days);
         
         // 1. Setup different course credits for students
@@ -230,30 +224,35 @@ contract IntegrationTest is Test {
         );
         vm.stopPrank();
         
-        // 2. Execute in-kind fee trade
+        // 2. Execute native fee trade
         uint256 tradeAmountA = 200;
         uint256 tradeAmountB = 150;
-        uint256 feeAInKind = 20; // 20 AI-101 credits as fee
-        uint256 feeBInKind = 15; // 15 ML-201 credits as fee
+        uint256 feeANative = 20 * 10**18; // 20 APT as fee from student1
+        uint256 feeBNative = 15 * 10**18; // 15 APT as fee from student2
+        
+        // Students approve platform tokens for fees
+        vm.prank(student1);
+        tokenAI.approve(address(llmBits), feeANative);
+        vm.prank(student2);
+        tokenAI.approve(address(llmBits), feeBNative);
         
         vm.prank(owner);
-        llmBits.tradeWithLLMFees(
+        llmBits.tradeWithNativeFees(
             student1, student2,
             ai101TokenId, tradeAmountA,
             ml201TokenId, tradeAmountB,
             0, // no match policy
-            feeAInKind, feeBInKind
+            feeANative, feeBNative
         );
         
         // 3. Verify complex balance state
-        assertEq(llmBits.balanceOf(student1, ai101TokenId), 500 - tradeAmountA - feeAInKind);
+        assertEq(llmBits.balanceOf(student1, ai101TokenId), 500 - tradeAmountA);
         assertEq(llmBits.balanceOf(student1, ml201TokenId), tradeAmountB);
         assertEq(llmBits.balanceOf(student2, ai101TokenId), tradeAmountA);
-        assertEq(llmBits.balanceOf(student2, ml201TokenId), 400 - tradeAmountB - feeBInKind);
+        assertEq(llmBits.balanceOf(student2, ml201TokenId), 400 - tradeAmountB);
         
-        // 4. Verify treasury collected in-kind fees
-        assertEq(llmBits.balanceOf(treasury, ai101TokenId), feeAInKind);
-        assertEq(llmBits.balanceOf(treasury, ml201TokenId), feeBInKind);
+        // 4. Verify treasury collected native fees
+        assertEq(tokenAI.balanceOf(treasury), feeANative + feeBNative);
     }
     
     function testPlatformEmergencyControls() public {
@@ -262,7 +261,7 @@ contract IntegrationTest is Test {
         
         // 1. Normal operations work
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 50, 0, 0);
+        llmBits.transfer(student1, student2, tokenId, 50, 0);
         assertEq(llmBits.balanceOf(student2, tokenId), 50);
         
         // 2. Emergency pause
@@ -272,7 +271,7 @@ contract IntegrationTest is Test {
         // 3. Operations are blocked
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(student1, student2, tokenId, 50, 0, 0);
+        llmBits.transfer(student1, student2, tokenId, 50, 0);
         
         vm.prank(owner);
         vm.expectRevert();
@@ -284,7 +283,7 @@ contract IntegrationTest is Test {
         llmBits.unpause();
         
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 50, 0, 0);
+        llmBits.transfer(student1, student2, tokenId, 50, 0);
         assertEq(llmBits.balanceOf(student2, tokenId), 100);
     }
     
@@ -307,13 +306,13 @@ contract IntegrationTest is Test {
         
         // 3. Student uses credits from both models
         vm.startPrank(owner);
-        llmBits.transfer(student1, platformUser, gpt4TokenId, 100, 0, 5);
-        llmBits.transfer(student1, platformUser, claudeTokenId, 80, 0, 3);
+        llmBits.transfer(student1, platformUser, gpt4TokenId, 100, 0);
+        llmBits.transfer(student1, platformUser, claudeTokenId, 80, 0);
         vm.stopPrank();
         
         // 4. Verify separate tracking
-        assertEq(llmBits.balanceOf(student1, gpt4TokenId), 300 - 100 - 5);
-        assertEq(llmBits.balanceOf(student1, claudeTokenId), 200 - 80 - 3);
+        assertEq(llmBits.balanceOf(student1, gpt4TokenId), 300 - 100);
+        assertEq(llmBits.balanceOf(student1, claudeTokenId), 200 - 80);
         assertEq(llmBits.balanceOf(platformUser, gpt4TokenId), 100);
         assertEq(llmBits.balanceOf(platformUser, claudeTokenId), 80);
     }
@@ -330,7 +329,7 @@ contract IntegrationTest is Test {
         tokenAI.approve(address(llmBits), 10 * 10**18);
         
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 100, 5 * 10**18, 10);
+        llmBits.transfer(student1, student2, tokenId, 100, 5 * 10**18);
         
         // 2. Collect fees through batch operations
         address[] memory recipients = new address[](1);
@@ -339,21 +338,17 @@ contract IntegrationTest is Test {
         amounts[0] = 50;
         uint256[] memory feesNative = new uint256[](1);
         feesNative[0] = 3 * 10**18;
-        uint256[] memory feesInKind = new uint256[](1);
-        feesInKind[0] = 5;
         
         vm.prank(student1);
         tokenAI.approve(address(llmBits), 3 * 10**18);
         
         vm.prank(owner);
-        llmBits.batchTransfer(student1, recipients, tokenId, amounts, feesNative, feesInKind);
+        llmBits.batchTransfer(student1, recipients, tokenId, amounts, feesNative);
         
         // 3. Verify total revenue collection
         uint256 totalAPTFees = 8 * 10**18; // 5 + 3
-        uint256 totalCreditFees = 15; // 10 + 5
         
         assertEq(tokenAI.balanceOf(treasury), initialTreasuryAPT + totalAPTFees);
-        assertEq(llmBits.balanceOf(treasury, tokenId), initialTreasuryCredits + totalCreditFees);
     }
     
     /*─────────────────────── Helper Functions ───────────────────────*/
@@ -381,10 +376,10 @@ contract IntegrationTest is Test {
         // Multiple sequential transfers
         for (uint i = 0; i < 10; i++) {
             vm.prank(owner);
-            llmBits.transfer(student1, student2, tokenId, 5, 0, 0);
+            llmBits.transfer(student1, student2, tokenId, 5, 0);
             
             vm.prank(owner);
-            llmBits.transfer(student2, student1, tokenId, 3, 0, 0);
+            llmBits.transfer(student2, student1, tokenId, 3, 0);
         }
         
         // Final balance check
