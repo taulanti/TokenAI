@@ -2,13 +2,13 @@
 pragma solidity ^0.8.21;
 
 import {Test, console} from "forge-std/Test.sol";
-import {LLMBits, ITokenAI} from "../src/LLMBits.sol";
+import {AAT, ITokenAI} from "../src/AAT.sol";
 import {TokenAI} from "../src/TokenAI.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-contract LLMBitsTest is Test {
+contract AATTest is Test {
     using Strings for uint256;
-    LLMBits public llmBits;
+    AAT public aat;
     TokenAI public tokenAI;
     
     address public owner;
@@ -62,14 +62,14 @@ contract LLMBitsTest is Test {
         // Deploy TokenAI first
         tokenAI = new TokenAI("TokenAI", "TAI", INITIAL_TOKEN_SUPPLY);
         
-        // Deploy LLMBits with TokenAI address
-        llmBits = new LLMBits(BASE_URI, address(tokenAI));
+        // Deploy AAT with TokenAI address
+        aat = new AAT(BASE_URI, address(tokenAI));
         
         // Set fee recipient
-        llmBits.setTreasury(treasury);
+        aat.setTreasury(treasury);
         
-        // Set LLMBits as authorized minter for TokenAI
-        tokenAI.setMinter(address(llmBits), true);
+        // Set AAT as authorized minter for TokenAI
+        tokenAI.setMinter(address(aat), true);
         
         vm.stopPrank();
     }
@@ -77,15 +77,15 @@ contract LLMBitsTest is Test {
     /*─────────────────────── Deployment Tests ───────────────────────*/
     
     function testDeployment() public view {
-        assertEq(address(llmBits.tokenAi()), address(tokenAI));
-        assertEq(llmBits.treasury(), treasury);
-        assertEq(llmBits.owner(), owner);
-        assertFalse(llmBits.paused());
+        assertEq(address(aat.tokenAi()), address(tokenAI));
+        assertEq(aat.treasury(), treasury);
+        assertEq(aat.owner(), owner);
+        assertFalse(aat.paused());
     }
     
     function testDeploymentWithoutTokenAI() public {
         vm.prank(owner);
-        LLMBits newContract = new LLMBits(BASE_URI, address(0));
+        AAT newContract = new AAT(BASE_URI, address(0));
         
         assertEq(address(newContract.tokenAi()), address(0));
     }
@@ -94,63 +94,63 @@ contract LLMBitsTest is Test {
     
     function testPause() public {
         vm.prank(owner);
-        llmBits.pause();
+        aat.pause();
         
-        assertTrue(llmBits.paused());
+        assertTrue(aat.paused());
     }
     
     function testUnpause() public {
         vm.startPrank(owner);
-        llmBits.pause();
-        llmBits.unpause();
+        aat.pause();
+        aat.unpause();
         vm.stopPrank();
         
-        assertFalse(llmBits.paused());
+        assertFalse(aat.paused());
     }
     
     function testSetBaseUri() public {
         string memory newUri = "https://newapi.example.com/";
         
         vm.prank(owner);
-        llmBits.setBaseUri(newUri);
+        aat.setBaseUri(newUri);
         
-        uint256 tokenId = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 tokenId = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
         string memory expectedUri = string(abi.encodePacked(newUri, tokenId.toHexString(32), ".json"));
-        assertEq(llmBits.uri(tokenId), expectedUri);
+        assertEq(aat.uri(tokenId), expectedUri);
     }
     
     function testSetFeeToken() public {
         TokenAI newToken = new TokenAI("NewToken", "NEW", 0);
         
         vm.prank(owner);
-        llmBits.setFeeToken(address(newToken));
+        aat.setFeeToken(address(newToken));
         
-        assertEq(address(llmBits.tokenAi()), address(newToken));
+        assertEq(address(aat.tokenAi()), address(newToken));
     }
     
     function testSetTreasury() public {
         address newRecipient = makeAddr("newRecipient");
         
         vm.prank(owner);
-        llmBits.setTreasury(newRecipient);
+        aat.setTreasury(newRecipient);
         
-        assertEq(llmBits.treasury(), newRecipient);
+        assertEq(aat.treasury(), newRecipient);
     }
     
     function testOnlyOwnerFunctions() public {
         vm.startPrank(user1);
         
         vm.expectRevert();
-        llmBits.pause();
+        aat.pause();
         
         vm.expectRevert();
-        llmBits.setBaseUri("test");
+        aat.setBaseUri("test");
         
         vm.expectRevert();
-        llmBits.setFeeToken(address(tokenAI));
+        aat.setFeeToken(address(tokenAI));
         
         vm.expectRevert();
-        llmBits.setTreasury(user2);
+        aat.setTreasury(user2);
         
         vm.stopPrank();
     }
@@ -158,23 +158,23 @@ contract LLMBitsTest is Test {
     /*─────────────────────── Token ID Computation Tests ───────────────────────*/
     
     function testComputeTokenId() public view {
-        uint256 tokenId1 = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
-        uint256 tokenId2 = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 tokenId1 = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 tokenId2 = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
         
         // Same parameters should produce same ID
         assertEq(tokenId1, tokenId2);
         
         // Different parameters should produce different ID
-        uint256 tokenId3 = llmBits.computeTokenId(originPool, "gpt-3", SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 tokenId3 = aat.computeTokenId(originPool, "gpt-3", SCOPE, expiration, RECLAIMABLE, TRADABLE);
         assertTrue(tokenId1 != tokenId3);
     }
     
     function testTokenIdDeterminism() public view {
-        uint256 tokenId = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 tokenId = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
         
         // Should be deterministic across calls
         for (uint i = 0; i < 5; i++) {
-            uint256 newId = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+            uint256 newId = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
             assertEq(tokenId, newId);
         }
     }
@@ -183,19 +183,19 @@ contract LLMBitsTest is Test {
     
     function testMintToAddress() public {
         uint256 amount = 1000;
-        uint256 expectedTokenId = llmBits.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
+        uint256 expectedTokenId = aat.computeTokenId(originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE);
         
         vm.expectEmit(true, true, false, true);
         emit TokenMinted(user1, expectedTokenId, amount, MODEL, SCOPE, expiration, originPool, RECLAIMABLE, TRADABLE);
         
         vm.prank(owner);
-        uint256 tokenId = llmBits.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount);
+        uint256 tokenId = aat.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount);
         
-        assertEq(llmBits.balanceOf(user1, tokenId), amount);
-        assertEq(llmBits.totalSupply(tokenId), amount);
+        assertEq(aat.balanceOf(user1, tokenId), amount);
+        assertEq(aat.totalSupply(tokenId), amount);
         
         // Check token config
-        LLMBits.TokenConfigs memory config = llmBits.getConfig(tokenId);
+        AAT.TokenConfigs memory config = aat.getConfig(tokenId);
         assertEq(config.model, MODEL);
         assertEq(config.scope, SCOPE);
         assertEq(config.expiration, expiration);
@@ -209,35 +209,35 @@ contract LLMBitsTest is Test {
         uint256 amount2 = 300;
         
         vm.startPrank(owner);
-        uint256 tokenId1 = llmBits.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount1);
-        uint256 tokenId2 = llmBits.mintToAddress(user2, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount2);
+        uint256 tokenId1 = aat.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount1);
+        uint256 tokenId2 = aat.mintToAddress(user2, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, amount2);
         vm.stopPrank();
         
         // Should be same token ID
         assertEq(tokenId1, tokenId2);
         
         // Total supply should be sum
-        assertEq(llmBits.totalSupply(tokenId1), amount1 + amount2);
-        assertEq(llmBits.balanceOf(user1, tokenId1), amount1);
-        assertEq(llmBits.balanceOf(user2, tokenId1), amount2);
+        assertEq(aat.totalSupply(tokenId1), amount1 + amount2);
+        assertEq(aat.balanceOf(user1, tokenId1), amount1);
+        assertEq(aat.balanceOf(user2, tokenId1), amount2);
     }
     
     function testMintZeroAmount() public {
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 0);
+        aat.mintToAddress(user1, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 0);
     }
     
     function testMintToZeroAddress() public {
         vm.prank(owner);
-        vm.expectRevert(LLMBits.ZeroAddress.selector);
-        llmBits.mintToAddress(address(0), originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 1000);
+        vm.expectRevert(AAT.ZeroAddress.selector);
+        aat.mintToAddress(address(0), originPool, MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 1000);
     }
     
     function testMintZeroOriginPool() public {
         vm.prank(owner);
-        vm.expectRevert(LLMBits.ZeroAddress.selector);
-        llmBits.mintToAddress(user1, address(0), MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 1000);
+        vm.expectRevert(AAT.ZeroAddress.selector);
+        aat.mintToAddress(user1, address(0), MODEL, SCOPE, expiration, RECLAIMABLE, TRADABLE, 1000);
     }
     
     /*─────────────────────── Transfer Tests ───────────────────────*/
@@ -251,15 +251,15 @@ contract LLMBitsTest is Test {
         vm.prank(owner);
         tokenAI.mint(user1, feeNative);
         
-        // User1 approves LLMBits to burn TokenAI
+        // User1 approves AAT to burn TokenAI
         vm.prank(user1);
-        tokenAI.approve(address(llmBits), feeNative);
+        tokenAI.approve(address(aat), feeNative);
         
         vm.prank(owner);
-        llmBits.transfer(user1, user2, tokenId, transferAmount, feeNative);
+        aat.transfer(user1, user2, tokenId, transferAmount, feeNative);
         
-        assertEq(llmBits.balanceOf(user1, tokenId), 1000 - transferAmount);
-        assertEq(llmBits.balanceOf(user2, tokenId), transferAmount);
+        assertEq(aat.balanceOf(user1, tokenId), 1000 - transferAmount);
+        assertEq(aat.balanceOf(user2, tokenId), transferAmount);
         assertEq(tokenAI.balanceOf(treasury), feeNative);
     }
     
@@ -267,17 +267,17 @@ contract LLMBitsTest is Test {
         uint256 tokenId = _mintTokenToUser(originPool, 1000, false); // Non-tradable
         
         vm.prank(owner);
-        llmBits.transfer(originPool, user1, tokenId, 300, 0);
+        aat.transfer(originPool, user1, tokenId, 300, 0);
         
-        assertEq(llmBits.balanceOf(user1, tokenId), 300);
+        assertEq(aat.balanceOf(user1, tokenId), 300);
     }
     
     function testTransferNonTradableFromNonOriginPool() public {
         uint256 tokenId = _mintTokenToUser(user1, 1000, false); // Non-tradable
         
         vm.prank(owner);
-        vm.expectRevert(LLMBits.TokenNotTradable.selector);
-        llmBits.transfer(user1, user2, tokenId, 300, 0);
+        vm.expectRevert(AAT.TokenNotTradable.selector);
+        aat.transfer(user1, user2, tokenId, 300, 0);
     }
     
     function testTransferExpiredToken() public {
@@ -288,8 +288,8 @@ contract LLMBitsTest is Test {
         vm.warp(block.timestamp + 2 days);
         
         vm.prank(owner);
-        vm.expectRevert(LLMBits.TokenExpired.selector);
-        llmBits.transfer(user1, user2, tokenId, 300, 0);
+        vm.expectRevert(AAT.TokenExpired.selector);
+        aat.transfer(user1, user2, tokenId, 300, 0);
     }
     
     function testTransferInsufficientBalance() public {
@@ -297,7 +297,7 @@ contract LLMBitsTest is Test {
         
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(user1, user2, tokenId, 1500, 0); // More than balance
+        aat.transfer(user1, user2, tokenId, 1500, 0); // More than balance
     }
     
     /*─────────────────────── Batch Transfer Tests ───────────────────────*/
@@ -326,22 +326,22 @@ contract LLMBitsTest is Test {
         tokenAI.mint(user1, totalNativeFees);
         
         vm.prank(user1);
-        tokenAI.approve(address(llmBits), totalNativeFees);
+        tokenAI.approve(address(aat), totalNativeFees);
         
         vm.prank(owner);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
+        aat.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
         
         // Check balances
-        assertEq(llmBits.balanceOf(recipients[0], tokenId), amounts[0]);
-        assertEq(llmBits.balanceOf(recipients[1], tokenId), amounts[1]);
-        assertEq(llmBits.balanceOf(recipients[2], tokenId), amounts[2]);
+        assertEq(aat.balanceOf(recipients[0], tokenId), amounts[0]);
+        assertEq(aat.balanceOf(recipients[1], tokenId), amounts[1]);
+        assertEq(aat.balanceOf(recipients[2], tokenId), amounts[2]);
         
         // Check fees collected
         assertEq(tokenAI.balanceOf(treasury), totalNativeFees);
         
         // Check remaining balance
         uint256 totalTransferred = 600; // 300 + 200 + 100
-        assertEq(llmBits.balanceOf(user1, tokenId), 2000 - totalTransferred);
+        assertEq(aat.balanceOf(user1, tokenId), 2000 - totalTransferred);
     }
     
     function testBatchTransferArrayLengthMismatch() public {
@@ -359,8 +359,8 @@ contract LLMBitsTest is Test {
         uint256[] memory feesNative = new uint256[](2);
         
         vm.prank(owner);
-        vm.expectRevert(LLMBits.ArrayLengthMismatch.selector);
-        llmBits.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
+        vm.expectRevert(AAT.ArrayLengthMismatch.selector);
+        aat.batchTransfer(user1, recipients, tokenId, amounts, feesNative);
     }
     
     /*─────────────────────── Trading Tests ───────────────────────*/
@@ -368,8 +368,8 @@ contract LLMBitsTest is Test {
     function testTradeWithNativeFees() public {
         // Create different token types for trading
         vm.startPrank(owner);
-        uint256 tokenIdA = llmBits.mintToAddress(user1, originPool, MODEL, "course-a", expiration, RECLAIMABLE, TRADABLE, 1000);
-        uint256 tokenIdB = llmBits.mintToAddress(user2, originPool, MODEL, "course-b", expiration, RECLAIMABLE, TRADABLE, 800);
+        uint256 tokenIdA = aat.mintToAddress(user1, originPool, MODEL, "course-a", expiration, RECLAIMABLE, TRADABLE, 1000);
+        uint256 tokenIdB = aat.mintToAddress(user2, originPool, MODEL, "course-b", expiration, RECLAIMABLE, TRADABLE, 800);
         vm.stopPrank();
         
         uint256 amountA = 300;
@@ -383,20 +383,20 @@ contract LLMBitsTest is Test {
         tokenAI.mint(user2, feeBNative);
         vm.stopPrank();
         
-        // Users approve LLMBits to burn their TokenAI
+        // Users approve AAT to burn their TokenAI
         vm.prank(user1);
-        tokenAI.approve(address(llmBits), feeANative);
+        tokenAI.approve(address(aat), feeANative);
         vm.prank(user2);
-        tokenAI.approve(address(llmBits), feeBNative);
+        tokenAI.approve(address(aat), feeBNative);
         
         vm.prank(owner);
-        llmBits.tradeWithNativeFees(user1, user2, tokenIdA, amountA, tokenIdB, amountB, 0, feeANative, feeBNative);
+        aat.tradeWithNativeFees(user1, user2, tokenIdA, amountA, tokenIdB, amountB, 0, feeANative, feeBNative);
         
         // Check token swaps
-        assertEq(llmBits.balanceOf(user1, tokenIdA), 1000 - amountA);
-        assertEq(llmBits.balanceOf(user1, tokenIdB), amountB);
-        assertEq(llmBits.balanceOf(user2, tokenIdA), amountA);
-        assertEq(llmBits.balanceOf(user2, tokenIdB), 800 - amountB);
+        assertEq(aat.balanceOf(user1, tokenIdA), 1000 - amountA);
+        assertEq(aat.balanceOf(user1, tokenIdB), amountB);
+        assertEq(aat.balanceOf(user2, tokenIdA), amountA);
+        assertEq(aat.balanceOf(user2, tokenIdB), 800 - amountB);
         
         // Check fees collected
         assertEq(tokenAI.balanceOf(treasury), feeANative + feeBNative);
@@ -415,18 +415,18 @@ contract LLMBitsTest is Test {
         uint64 newExpiration = uint64(block.timestamp + 30 days);
         
         vm.prank(owner);
-        uint256 newTokenId = llmBits.burnAndRemintExpired(user1, oldTokenId, newExpiration);
+        uint256 newTokenId = aat.burnAndRemintExpired(user1, oldTokenId, newExpiration);
         
         // Old token should be burned
-        assertEq(llmBits.balanceOf(user1, oldTokenId), 0);
-        assertEq(llmBits.totalSupply(oldTokenId), 0);
+        assertEq(aat.balanceOf(user1, oldTokenId), 0);
+        assertEq(aat.totalSupply(oldTokenId), 0);
         
         // New token should be minted
-        assertEq(llmBits.balanceOf(user1, newTokenId), 1000);
-        assertEq(llmBits.totalSupply(newTokenId), 1000);
+        assertEq(aat.balanceOf(user1, newTokenId), 1000);
+        assertEq(aat.totalSupply(newTokenId), 1000);
         
         // Check new token config
-        LLMBits.TokenConfigs memory config = llmBits.getConfig(newTokenId);
+        AAT.TokenConfigs memory config = aat.getConfig(newTokenId);
         assertEq(config.expiration, newExpiration);
     }
     
@@ -435,8 +435,8 @@ contract LLMBitsTest is Test {
         uint64 newExpiration = uint64(block.timestamp + 60 days);
         
         vm.prank(owner);
-        vm.expectRevert(LLMBits.TokenNotExpired.selector);
-        llmBits.burnAndRemintExpired(user1, tokenId, newExpiration);
+        vm.expectRevert(AAT.TokenNotExpired.selector);
+        aat.burnAndRemintExpired(user1, tokenId, newExpiration);
     }
     
     function testBurnAndRemintInvalidExpiration() public {
@@ -449,8 +449,8 @@ contract LLMBitsTest is Test {
         uint64 invalidExpiration = uint64(block.timestamp - 1 hours); // Past time
         
         vm.prank(owner);
-        vm.expectRevert(LLMBits.InvalidExpiration.selector);
-        llmBits.burnAndRemintExpired(user1, tokenId, invalidExpiration);
+        vm.expectRevert(AAT.InvalidExpiration.selector);
+        aat.burnAndRemintExpired(user1, tokenId, invalidExpiration);
     }
     
     /*─────────────────────── Helper Functions ───────────────────────*/
@@ -461,12 +461,12 @@ contract LLMBitsTest is Test {
     
     function _mintTokenToUser(address user, uint256 amount, bool tradable) internal returns (uint256 tokenId) {
         vm.prank(owner);
-        tokenId = llmBits.mintToAddress(user, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, tradable, amount);
+        tokenId = aat.mintToAddress(user, originPool, MODEL, SCOPE, expiration, RECLAIMABLE, tradable, amount);
     }
     
     function _mintTokenWithExpiration(address user, uint256 amount, uint64 exp) internal returns (uint256 tokenId) {
         vm.prank(owner);
-        tokenId = llmBits.mintToAddress(user, originPool, MODEL, SCOPE, exp, RECLAIMABLE, TRADABLE, amount);
+        tokenId = aat.mintToAddress(user, originPool, MODEL, SCOPE, exp, RECLAIMABLE, TRADABLE, amount);
     }
     
     /*─────────────────────── View Function Tests ───────────────────────*/
@@ -480,22 +480,22 @@ contract LLMBitsTest is Test {
         uint256 noExpirationTokenId = _mintTokenWithExpiration(user1, 1000, 0);
         
         // Initially not expired
-        assertFalse(llmBits.isExpired(shortTokenId));
-        assertFalse(llmBits.isExpired(validTokenId));
-        assertFalse(llmBits.isExpired(noExpirationTokenId));
+        assertFalse(aat.isExpired(shortTokenId));
+        assertFalse(aat.isExpired(validTokenId));
+        assertFalse(aat.isExpired(noExpirationTokenId));
         
         // Move time forward to expire short token
         vm.warp(block.timestamp + 2 days);
         
-        assertTrue(llmBits.isExpired(shortTokenId));
-        assertFalse(llmBits.isExpired(validTokenId));
-        assertFalse(llmBits.isExpired(noExpirationTokenId));
+        assertTrue(aat.isExpired(shortTokenId));
+        assertFalse(aat.isExpired(validTokenId));
+        assertFalse(aat.isExpired(noExpirationTokenId));
     }
     
     function testGetConfig() public {
         uint256 tokenId = _mintTokenToUser(user1, 1000);
         
-        LLMBits.TokenConfigs memory config = llmBits.getConfig(tokenId);
+        AAT.TokenConfigs memory config = aat.getConfig(tokenId);
         assertEq(config.model, MODEL);
         assertEq(config.scope, SCOPE);
         assertEq(config.expiration, expiration);
@@ -507,24 +507,24 @@ contract LLMBitsTest is Test {
     function testGetConfigUnknownToken() public {
         uint256 unknownTokenId = 12345;
         
-        vm.expectRevert(abi.encodeWithSelector(LLMBits.UnknownTokenId.selector, unknownTokenId));
-        llmBits.getConfig(unknownTokenId);
+        vm.expectRevert(abi.encodeWithSelector(AAT.UnknownTokenId.selector, unknownTokenId));
+        aat.getConfig(unknownTokenId);
     }
     
     function testURI() public {
         uint256 tokenId = _mintTokenToUser(user1, 1000);
         
         string memory expectedUri = string(abi.encodePacked(BASE_URI, tokenId.toHexString(32), ".json"));
-        assertEq(llmBits.uri(tokenId), expectedUri);
+        assertEq(aat.uri(tokenId), expectedUri);
     }
     
     /*─────────────────────── Approval Disabled Tests ───────────────────────*/
     
     function testApprovalsDisabled() public {
         vm.prank(user1);
-        vm.expectRevert(LLMBits.ApprovalsDisabled.selector);
-        llmBits.setApprovalForAll(user2, true);
+        vm.expectRevert(AAT.ApprovalsDisabled.selector);
+        aat.setApprovalForAll(user2, true);
         
-        assertFalse(llmBits.isApprovedForAll(user1, user2));
+        assertFalse(aat.isApprovedForAll(user1, user2));
     }
 }

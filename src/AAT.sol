@@ -9,10 +9,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /*───────────────────────────────────────────────────────────────────────────*\
-│  LLMBits                                                                  │
+│  AAT (AI Access Token)                                                   │
 │                                                                           │
 │  ERC-1155 with per-class configuration, custodial transfer/trade, and     │
-│  dual fee modes (native ERC20 or in-kind).                                │
+│  native TokenAI fee support.                                              │
 │                                                                           │
 │  • All transfer/trade entrypoints are owner-only (custodian flow).        │
 │  • Transfers allowed if token is tradable OR sender == originPool.        │
@@ -26,13 +26,13 @@ interface ITokenAI {
     function balanceOf(address account) external view returns (uint256);
 }
 
-contract LLMBits is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
+contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     using Strings for uint256;
 
     /*─────────────────────────── Constants ───────────────────────────*/
 
     // Bump this if you ever change the token id encoding scheme/fields.
-    bytes32 private constant _ID_DOMAIN = keccak256("LLMBits.v1");
+    bytes32 private constant _ID_DOMAIN = keccak256("AAT.v1");
 
     /*─────────────────────────── Storage ────────────────────────────*/
 

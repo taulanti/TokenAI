@@ -47,7 +47,7 @@ contract DeployTokenAI is Script {
         console.log("\n=== NEXT STEPS ===");
         console.log("1. Add this to your .env file:");
         console.log(string(abi.encodePacked("TREASURY_ADDRESS=", vm.toString(address(tokenAI)))));
-        console.log("2. Deploy LLMBits using DeployLLMBits script");
+        console.log("2. Deploy AAT using DeployAAT script");
         
         // Verification command
         console.log("\n=== VERIFICATION COMMAND ===");
