@@ -2,7 +2,7 @@
 pragma solidity ^0.8.21;
 
 import {Script, console} from "forge-std/Script.sol";
-import {LLMBits} from "../src/LLMBits.sol";
+import {AAT} from "../src/AAT.sol";
 import {TokenAI} from "../src/TokenAI.sol";
 
 /**
@@ -17,12 +17,12 @@ contract TestTransfers is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        address llmBitsAddress = vm.envAddress("LLM_BITS_ADDRESS");
+        address aatAddress = vm.envAddress("AAT_ADDRESS");
         address tokenAiAddress = vm.envAddress("TOKEN_AI_ADDRESS");
         address testAccount1 = vm.envAddress("TEST_ACCOUNT_1_ADDRESS");
         address testAccount2 = vm.envAddress("TEST_ACCOUNT_2_ADDRESS");
         
-        LLMBits llmBits = LLMBits(llmBitsAddress);
+        AAT aat = AAT(aatAddress);
         TokenAI tokenAI = TokenAI(tokenAiAddress);
         
         console.log("Testing transfer functionality...");
@@ -35,14 +35,14 @@ contract TestTransfers is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         console.log("\n=== BEFORE TRANSFERS ===");
-        _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
+        _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
         
         // Test 1: Simple transfer with native fee
         console.log("\n=== TEST 1: SIMPLE TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 50 GPT-4 AI Course tokens from Account 1 to Account 2");
         console.log("Fee: 5 tTAI");
         
-        llmBits.transfer(
+        aat.transfer(
             testAccount1,
             testAccount2,
             gptAiCourseId,
@@ -51,14 +51,14 @@ contract TestTransfers is Script {
         );
         
         console.log("\n=== AFTER TRANSFER 1 ===");
-        _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
+        _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
         
         // Test 2: Transfer with native fee only
         console.log("\n=== TEST 2: TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 25 Claude ML tokens from Account 1 to Account 2");
         console.log("Fee: 2 tTAI");
         
-        llmBits.transfer(
+        aat.transfer(
             testAccount1,
             testAccount2,
             claudeMlCourseId,
@@ -67,7 +67,7 @@ contract TestTransfers is Script {
         );
         
         console.log("\n=== AFTER TRANSFER 2 ===");
-        _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
+        _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
         
         // Test 3: Batch transfer
         console.log("\n=== TEST 3: BATCH TRANSFER ===");
@@ -85,7 +85,7 @@ contract TestTransfers is Script {
         feesNative[0] = 2 * 10**18; // 2 tTAI fee for Account 2 transfer
         feesNative[1] = 1 * 10**18; // 1 tTAI fee for deployer transfer
         
-        llmBits.batchTransfer(
+        aat.batchTransfer(
             testAccount1,
             recipients,
             gptAiCourseId,
@@ -94,14 +94,14 @@ contract TestTransfers is Script {
         );
         
         console.log("\n=== AFTER BATCH TRANSFER ===");
-        _displayBalances(llmBits, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
-        console.log("Deployer GPT-4 AI Course balance:", llmBits.balanceOf(deployer, gptAiCourseId));
+        _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
+        console.log("Deployer GPT-4 AI Course balance:", aat.balanceOf(deployer, gptAiCourseId));
         
         // Test 4: Try to transfer non-tradable token (should fail from non-origin pool)
         console.log("\n=== TEST 4: NON-TRADABLE TOKEN TRANSFER (SHOULD FAIL) ===");
         console.log("Attempting to transfer non-tradable token from Account 2 (should fail)");
         
-        try llmBits.transfer(
+        try aat.transfer(
             testAccount2,
             testAccount1,
             nonTradableId,
@@ -120,7 +120,7 @@ contract TestTransfers is Script {
         // First, transfer some non-tradable tokens to origin pool
         uint256 instructorPoolId = _computeTokenId("claude-3", "instructor-pool", uint64(block.timestamp + 180 days), false);
         
-        llmBits.transfer(
+        aat.transfer(
             deployer,        // from origin pool
             testAccount1,    // to Account 1
             instructorPoolId,
@@ -129,20 +129,20 @@ contract TestTransfers is Script {
         );
         
         console.log("Transferred 50 instructor pool tokens to Account 1");
-        console.log("Account 1 instructor pool balance:", llmBits.balanceOf(testAccount1, instructorPoolId));
+        console.log("Account 1 instructor pool balance:", aat.balanceOf(testAccount1, instructorPoolId));
         
         vm.stopBroadcast();
         
         // Final summary
         console.log("\n=== FINAL TREASURY SUMMARY ===");
-        address treasury = llmBits.treasury();
+        address treasury = aat.treasury();
         console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tTAI");
-        console.log("Treasury GPT-4 AI Course tokens:", llmBits.balanceOf(treasury, gptAiCourseId));
-        console.log("Treasury Claude ML tokens:", llmBits.balanceOf(treasury, claudeMlCourseId));
+        console.log("Treasury GPT-4 AI Course tokens:", aat.balanceOf(treasury, gptAiCourseId));
+        console.log("Treasury Claude ML tokens:", aat.balanceOf(treasury, claudeMlCourseId));
     }
     
     function _displayBalances(
-        LLMBits llmBits,
+        AAT aat,
         TokenAI tokenAI,
         address account1,
         address account2,
@@ -151,13 +151,13 @@ contract TestTransfers is Script {
     ) internal view {
         console.log("Account 1:");
         console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tTAI");
-        console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account1, tokenId1));
-        console.log("  - Claude ML Course tokens:", llmBits.balanceOf(account1, tokenId2));
+        console.log("  - GPT-4 AI Course tokens:", aat.balanceOf(account1, tokenId1));
+        console.log("  - Claude ML Course tokens:", aat.balanceOf(account1, tokenId2));
         
         console.log("Account 2:");
         console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tTAI");
-        console.log("  - GPT-4 AI Course tokens:", llmBits.balanceOf(account2, tokenId1));
-        console.log("  - Claude ML Course tokens:", llmBits.balanceOf(account2, tokenId2));
+        console.log("  - GPT-4 AI Course tokens:", aat.balanceOf(account2, tokenId1));
+        console.log("  - Claude ML Course tokens:", aat.balanceOf(account2, tokenId2));
     }
     
     function _computeTokenId(bytes16 model, bytes16 scope, uint64 expiration) internal view returns (uint256) {

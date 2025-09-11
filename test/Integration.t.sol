@@ -2,11 +2,11 @@
 pragma solidity ^0.8.21;
 
 import {Test, console} from "forge-std/Test.sol";
-import {LLMBits, ITokenAI} from "../src/LLMBits.sol";
+import {AAT, ITokenAI} from "../src/AAT.sol";
 import {TokenAI} from "../src/TokenAI.sol";
 
 contract IntegrationTest is Test {
-    LLMBits public llmBits;
+    AAT public aat;
     TokenAI public tokenAI;
     
     address public owner;
@@ -38,14 +38,14 @@ contract IntegrationTest is Test {
         // Deploy platform token with initial supply
         tokenAI = new TokenAI("AI Platform Token", "APT", PLATFORM_INITIAL_SUPPLY);
         
-        // Deploy LLMBits with TokenAI integration
-        llmBits = new LLMBits(BASE_URI, address(tokenAI));
+        // Deploy AAT with TokenAI integration
+        aat = new AAT(BASE_URI, address(tokenAI));
         
         // Set treasury as fee recipient
-        llmBits.setTreasury(treasury);
+        aat.setTreasury(treasury);
         
-        // Set LLMBits as authorized minter for TokenAI
-        tokenAI.setMinter(address(llmBits), true);
+        // Set AAT as authorized minter for TokenAI
+        tokenAI.setMinter(address(aat), true);
         
         // Distribute some platform tokens to users
         tokenAI.mint(student1, 1000 * 10**18);
@@ -64,7 +64,7 @@ contract IntegrationTest is Test {
         
         // 1. Platform mints course credits to student
         vm.prank(owner);
-        uint256 courseTokenId = llmBits.mintToAddress(
+        uint256 courseTokenId = aat.mintToAddress(
             student1,
             instructor, // Instructor is the origin pool
             MODEL_GPT4,
@@ -76,7 +76,7 @@ contract IntegrationTest is Test {
         );
         
         // 2. Verify student received credits
-        assertEq(llmBits.balanceOf(student1, courseTokenId), creditAmount);
+        assertEq(aat.balanceOf(student1, courseTokenId), creditAmount);
         
         // 3. Student uses credits (simulated as transfer to platform for usage)
         uint256 usageAmount = 100;
@@ -84,14 +84,14 @@ contract IntegrationTest is Test {
         uint256 usageFeeInKind = 10; // 10 credits fee
         
         vm.prank(student1);
-        tokenAI.approve(address(llmBits), usageFeeNative);
+        tokenAI.approve(address(aat), usageFeeNative);
         
         vm.prank(owner);
-        llmBits.transfer(student1, platformUser, courseTokenId, usageAmount, usageFeeNative);
+        aat.transfer(student1, platformUser, courseTokenId, usageAmount, usageFeeNative);
         
         // 4. Verify usage and fees
-        assertEq(llmBits.balanceOf(student1, courseTokenId), creditAmount - usageAmount);
-        assertEq(llmBits.balanceOf(platformUser, courseTokenId), usageAmount);
+        assertEq(aat.balanceOf(student1, courseTokenId), creditAmount - usageAmount);
+        assertEq(aat.balanceOf(platformUser, courseTokenId), usageAmount);
         assertEq(tokenAI.balanceOf(treasury), usageFeeNative);
     }
     
@@ -101,10 +101,10 @@ contract IntegrationTest is Test {
         
         // 1. Platform mints different course credits to students
         vm.startPrank(owner);
-        uint256 ai101TokenId = llmBits.mintToAddress(
+        uint256 ai101TokenId = aat.mintToAddress(
             student1, instructor, MODEL_GPT4, COURSE_AI_101, expiration, true, true, 300
         );
-        uint256 ml201TokenId = llmBits.mintToAddress(
+        uint256 ml201TokenId = aat.mintToAddress(
             student2, instructor, MODEL_CLAUDE, COURSE_ML_201, expiration, true, true, 200
         );
         vm.stopPrank();
@@ -117,12 +117,12 @@ contract IntegrationTest is Test {
         
         // Students approve platform token for fees
         vm.prank(student1);
-        tokenAI.approve(address(llmBits), tradeFeeA);
+        tokenAI.approve(address(aat), tradeFeeA);
         vm.prank(student2);
-        tokenAI.approve(address(llmBits), tradeFeeB);
+        tokenAI.approve(address(aat), tradeFeeB);
         
         vm.prank(owner);
-        llmBits.tradeWithNativeFees(
+        aat.tradeWithNativeFees(
             student1, student2,
             ai101TokenId, tradeAmountA,
             ml201TokenId, tradeAmountB,
@@ -131,10 +131,10 @@ contract IntegrationTest is Test {
         );
         
         // 3. Verify trade results
-        assertEq(llmBits.balanceOf(student1, ai101TokenId), 300 - tradeAmountA);
-        assertEq(llmBits.balanceOf(student1, ml201TokenId), tradeAmountB);
-        assertEq(llmBits.balanceOf(student2, ai101TokenId), tradeAmountA);
-        assertEq(llmBits.balanceOf(student2, ml201TokenId), 200 - tradeAmountB);
+        assertEq(aat.balanceOf(student1, ai101TokenId), 300 - tradeAmountA);
+        assertEq(aat.balanceOf(student1, ml201TokenId), tradeAmountB);
+        assertEq(aat.balanceOf(student2, ai101TokenId), tradeAmountA);
+        assertEq(aat.balanceOf(student2, ml201TokenId), 200 - tradeAmountB);
         
         // 4. Verify fees collected
         assertEq(tokenAI.balanceOf(treasury), tradeFeeA + tradeFeeB);
@@ -147,7 +147,7 @@ contract IntegrationTest is Test {
         
         // 1. Platform mints credits to instructor
         vm.prank(owner);
-        uint256 tokenId = llmBits.mintToAddress(
+        uint256 tokenId = aat.mintToAddress(
             instructor, instructor, MODEL_GPT4, COURSE_AI_101, expiration, true, true, totalCredits
         );
         
@@ -166,19 +166,19 @@ contract IntegrationTest is Test {
         
         // Instructor approves platform tokens for fees
         vm.prank(instructor);
-        tokenAI.approve(address(llmBits), 2 * 10**18);
+        tokenAI.approve(address(aat), 2 * 10**18);
         
         vm.prank(owner);
-        llmBits.batchTransfer(instructor, students, tokenId, amounts, feesNative);
+        aat.batchTransfer(instructor, students, tokenId, amounts, feesNative);
         
         // 3. Verify distribution
-        assertEq(llmBits.balanceOf(student1, tokenId), amounts[0]);
-        assertEq(llmBits.balanceOf(student2, tokenId), amounts[1]);
+        assertEq(aat.balanceOf(student1, tokenId), amounts[0]);
+        assertEq(aat.balanceOf(student2, tokenId), amounts[1]);
         assertEq(tokenAI.balanceOf(treasury), 2 * 10**18); // Total native fees
         
         // 4. Verify instructor's remaining balance
         uint256 expectedRemaining = totalCredits - amounts[0] - amounts[1]; // Minus distribution
-        assertEq(llmBits.balanceOf(instructor, tokenId), expectedRemaining);
+        assertEq(aat.balanceOf(instructor, tokenId), expectedRemaining);
     }
     
     function testExpiredCreditsRenewal() public {
@@ -188,25 +188,25 @@ contract IntegrationTest is Test {
         
         // 1. Platform mints short-term credits
         vm.prank(owner);
-        uint256 oldTokenId = llmBits.mintToAddress(
+        uint256 oldTokenId = aat.mintToAddress(
             student1, instructor, MODEL_GPT4, COURSE_AI_101, shortExpiration, true, true, creditAmount
         );
         
         // 2. Time passes and credits expire
         vm.warp(block.timestamp + 2 days);
-        assertTrue(llmBits.isExpired(oldTokenId));
+        assertTrue(aat.isExpired(oldTokenId));
         
         // 3. Platform renews expired credits with new expiration
         uint64 newExpiration = uint64(block.timestamp + 30 days);
         vm.prank(owner);
-        uint256 newTokenId = llmBits.burnAndRemintExpired(student1, oldTokenId, newExpiration);
+        uint256 newTokenId = aat.burnAndRemintExpired(student1, oldTokenId, newExpiration);
         
         // 4. Verify renewal
-        assertEq(llmBits.balanceOf(student1, oldTokenId), 0); // Old credits burned
-        assertEq(llmBits.balanceOf(student1, newTokenId), creditAmount); // New credits minted
-        assertFalse(llmBits.isExpired(newTokenId)); // New credits not expired
+        assertEq(aat.balanceOf(student1, oldTokenId), 0); // Old credits burned
+        assertEq(aat.balanceOf(student1, newTokenId), creditAmount); // New credits minted
+        assertFalse(aat.isExpired(newTokenId)); // New credits not expired
         
-        LLMBits.TokenConfigs memory config = llmBits.getConfig(newTokenId);
+        AAT.TokenConfigs memory config = aat.getConfig(newTokenId);
         assertEq(config.expiration, newExpiration);
     }
     
@@ -216,10 +216,10 @@ contract IntegrationTest is Test {
         
         // 1. Setup different course credits for students
         vm.startPrank(owner);
-        uint256 ai101TokenId = llmBits.mintToAddress(
+        uint256 ai101TokenId = aat.mintToAddress(
             student1, instructor, MODEL_GPT4, COURSE_AI_101, expiration, true, true, 500
         );
-        uint256 ml201TokenId = llmBits.mintToAddress(
+        uint256 ml201TokenId = aat.mintToAddress(
             student2, instructor, MODEL_CLAUDE, COURSE_ML_201, expiration, true, true, 400
         );
         vm.stopPrank();
@@ -232,12 +232,12 @@ contract IntegrationTest is Test {
         
         // Students approve platform tokens for fees
         vm.prank(student1);
-        tokenAI.approve(address(llmBits), feeANative);
+        tokenAI.approve(address(aat), feeANative);
         vm.prank(student2);
-        tokenAI.approve(address(llmBits), feeBNative);
+        tokenAI.approve(address(aat), feeBNative);
         
         vm.prank(owner);
-        llmBits.tradeWithNativeFees(
+        aat.tradeWithNativeFees(
             student1, student2,
             ai101TokenId, tradeAmountA,
             ml201TokenId, tradeAmountB,
@@ -246,10 +246,10 @@ contract IntegrationTest is Test {
         );
         
         // 3. Verify complex balance state
-        assertEq(llmBits.balanceOf(student1, ai101TokenId), 500 - tradeAmountA);
-        assertEq(llmBits.balanceOf(student1, ml201TokenId), tradeAmountB);
-        assertEq(llmBits.balanceOf(student2, ai101TokenId), tradeAmountA);
-        assertEq(llmBits.balanceOf(student2, ml201TokenId), 400 - tradeAmountB);
+        assertEq(aat.balanceOf(student1, ai101TokenId), 500 - tradeAmountA);
+        assertEq(aat.balanceOf(student1, ml201TokenId), tradeAmountB);
+        assertEq(aat.balanceOf(student2, ai101TokenId), tradeAmountA);
+        assertEq(aat.balanceOf(student2, ml201TokenId), 400 - tradeAmountB);
         
         // 4. Verify treasury collected native fees
         assertEq(tokenAI.balanceOf(treasury), feeANative + feeBNative);
@@ -261,30 +261,30 @@ contract IntegrationTest is Test {
         
         // 1. Normal operations work
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 50, 0);
-        assertEq(llmBits.balanceOf(student2, tokenId), 50);
+        aat.transfer(student1, student2, tokenId, 50, 0);
+        assertEq(aat.balanceOf(student2, tokenId), 50);
         
         // 2. Emergency pause
         vm.prank(owner);
-        llmBits.pause();
+        aat.pause();
         
         // 3. Operations are blocked
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.transfer(student1, student2, tokenId, 50, 0);
+        aat.transfer(student1, student2, tokenId, 50, 0);
         
         vm.prank(owner);
         vm.expectRevert();
-        llmBits.mintToAddress(student1, instructor, MODEL_GPT4, COURSE_AI_101, 
+        aat.mintToAddress(student1, instructor, MODEL_GPT4, COURSE_AI_101, 
                              uint64(block.timestamp + 30 days), true, true, 100);
         
         // 4. Unpause and resume operations
         vm.prank(owner);
-        llmBits.unpause();
+        aat.unpause();
         
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 50, 0);
-        assertEq(llmBits.balanceOf(student2, tokenId), 100);
+        aat.transfer(student1, student2, tokenId, 50, 0);
+        assertEq(aat.balanceOf(student2, tokenId), 100);
     }
     
     function testMultiModelCreditManagement() public {
@@ -293,10 +293,10 @@ contract IntegrationTest is Test {
         
         // 1. Mint credits for different models
         vm.startPrank(owner);
-        uint256 gpt4TokenId = llmBits.mintToAddress(
+        uint256 gpt4TokenId = aat.mintToAddress(
             student1, instructor, MODEL_GPT4, COURSE_AI_101, expiration, true, true, 300
         );
-        uint256 claudeTokenId = llmBits.mintToAddress(
+        uint256 claudeTokenId = aat.mintToAddress(
             student1, instructor, MODEL_CLAUDE, COURSE_AI_101, expiration, true, true, 200
         );
         vm.stopPrank();
@@ -306,15 +306,15 @@ contract IntegrationTest is Test {
         
         // 3. Student uses credits from both models
         vm.startPrank(owner);
-        llmBits.transfer(student1, platformUser, gpt4TokenId, 100, 0);
-        llmBits.transfer(student1, platformUser, claudeTokenId, 80, 0);
+        aat.transfer(student1, platformUser, gpt4TokenId, 100, 0);
+        aat.transfer(student1, platformUser, claudeTokenId, 80, 0);
         vm.stopPrank();
         
         // 4. Verify separate tracking
-        assertEq(llmBits.balanceOf(student1, gpt4TokenId), 300 - 100);
-        assertEq(llmBits.balanceOf(student1, claudeTokenId), 200 - 80);
-        assertEq(llmBits.balanceOf(platformUser, gpt4TokenId), 100);
-        assertEq(llmBits.balanceOf(platformUser, claudeTokenId), 80);
+        assertEq(aat.balanceOf(student1, gpt4TokenId), 300 - 100);
+        assertEq(aat.balanceOf(student1, claudeTokenId), 200 - 80);
+        assertEq(aat.balanceOf(platformUser, gpt4TokenId), 100);
+        assertEq(aat.balanceOf(platformUser, claudeTokenId), 80);
     }
     
     function testPlatformRevenueCollection() public {
@@ -322,14 +322,14 @@ contract IntegrationTest is Test {
         uint256 tokenId = _setupBasicCredits();
         
         uint256 initialTreasuryAPT = tokenAI.balanceOf(treasury);
-        uint256 initialTreasuryCredits = llmBits.balanceOf(treasury, tokenId);
+        uint256 initialTreasuryCredits = aat.balanceOf(treasury, tokenId);
         
         // 1. Collect fees through transfers
         vm.prank(student1);
-        tokenAI.approve(address(llmBits), 10 * 10**18);
+        tokenAI.approve(address(aat), 10 * 10**18);
         
         vm.prank(owner);
-        llmBits.transfer(student1, student2, tokenId, 100, 5 * 10**18);
+        aat.transfer(student1, student2, tokenId, 100, 5 * 10**18);
         
         // 2. Collect fees through batch operations
         address[] memory recipients = new address[](1);
@@ -340,10 +340,10 @@ contract IntegrationTest is Test {
         feesNative[0] = 3 * 10**18;
         
         vm.prank(student1);
-        tokenAI.approve(address(llmBits), 3 * 10**18);
+        tokenAI.approve(address(aat), 3 * 10**18);
         
         vm.prank(owner);
-        llmBits.batchTransfer(student1, recipients, tokenId, amounts, feesNative);
+        aat.batchTransfer(student1, recipients, tokenId, amounts, feesNative);
         
         // 3. Verify total revenue collection
         uint256 totalAPTFees = 8 * 10**18; // 5 + 3
@@ -355,7 +355,7 @@ contract IntegrationTest is Test {
     
     function _setupBasicCredits() internal returns (uint256 tokenId) {
         vm.prank(owner);
-        tokenId = llmBits.mintToAddress(
+        tokenId = aat.mintToAddress(
             student1,
             instructor,
             MODEL_GPT4,
@@ -376,16 +376,16 @@ contract IntegrationTest is Test {
         // Multiple sequential transfers
         for (uint i = 0; i < 10; i++) {
             vm.prank(owner);
-            llmBits.transfer(student1, student2, tokenId, 5, 0);
+            aat.transfer(student1, student2, tokenId, 5, 0);
             
             vm.prank(owner);
-            llmBits.transfer(student2, student1, tokenId, 3, 0);
+            aat.transfer(student2, student1, tokenId, 3, 0);
         }
         
         // Final balance check
         uint256 netTransferToStudent2 = (5 - 3) * 10; // 20 credits net
-        assertEq(llmBits.balanceOf(student2, tokenId), netTransferToStudent2);
-        assertEq(llmBits.balanceOf(student1, tokenId), 1000 - netTransferToStudent2);
+        assertEq(aat.balanceOf(student2, tokenId), netTransferToStudent2);
+        assertEq(aat.balanceOf(student1, tokenId), 1000 - netTransferToStudent2);
     }
     
     function testComplexMultiUserScenario() public {
@@ -402,9 +402,9 @@ contract IntegrationTest is Test {
         // Create different token types
         vm.startPrank(owner);
         uint256[] memory tokenIds = new uint256[](3);
-        tokenIds[0] = llmBits.mintToAddress(users[0], instructor, MODEL_GPT4, "course-1", expiration, true, true, 500);
-        tokenIds[1] = llmBits.mintToAddress(users[1], instructor, MODEL_CLAUDE, "course-2", expiration, true, true, 400);
-        tokenIds[2] = llmBits.mintToAddress(users[2], instructor, MODEL_GPT4, "course-3", expiration, true, true, 600);
+        tokenIds[0] = aat.mintToAddress(users[0], instructor, MODEL_GPT4, "course-1", expiration, true, true, 500);
+        tokenIds[1] = aat.mintToAddress(users[1], instructor, MODEL_CLAUDE, "course-2", expiration, true, true, 400);
+        tokenIds[2] = aat.mintToAddress(users[2], instructor, MODEL_GPT4, "course-3", expiration, true, true, 600);
         vm.stopPrank();
         
         // Execute complex trading patterns
@@ -415,12 +415,12 @@ contract IntegrationTest is Test {
             uint256 tokenB = (i + 1) % 3;
             
             vm.prank(users[userA]);
-            tokenAI.approve(address(llmBits), 5 * 10**18);
+            tokenAI.approve(address(aat), 5 * 10**18);
             vm.prank(users[userB]);
-            tokenAI.approve(address(llmBits), 5 * 10**18);
+            tokenAI.approve(address(aat), 5 * 10**18);
             
             vm.prank(owner);
-            llmBits.tradeWithNativeFees(
+            aat.tradeWithNativeFees(
                 users[userA], users[userB],
                 tokenIds[tokenA], 50,
                 tokenIds[tokenB], 40,
@@ -430,7 +430,7 @@ contract IntegrationTest is Test {
         
         // Verify final state is consistent
         for (uint i = 0; i < 3; i++) {
-            assertTrue(llmBits.totalSupply(tokenIds[i]) > 0);
+            assertTrue(aat.totalSupply(tokenIds[i]) > 0);
             assertTrue(tokenAI.balanceOf(treasury) > 0);
         }
     }
