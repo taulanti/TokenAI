@@ -7,7 +7,7 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
 - **TokenAI (ERC20)**: Platform native token used for fees and treasury operations
 - **AAT (ERC1155)**: AI Access Tokens for AI models with configurable parameters
 - **Custodial System**: Owner-controlled transfers and trades for platform management
-- **Dual Fee Modes**: Pay fees in native tokens (TokenAI) or in-kind (AAT)
+- **Native Fee System**: Pay fees in native tokens (TokenAI)
 - **Expirable Tokens**: Automatic token expiration with burn-and-remint functionality
 - **Trading System**: Token-to-token trading with flexible fee structures
 - **Security Features**: Reentrancy protection, pausable functions, role-based access
