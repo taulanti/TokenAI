@@ -5,9 +5,9 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
 ## 🌟 Features
 
 - **TokenAI (ERC20)**: Platform native token used for fees and treasury operations
-- **LLMBits (ERC1155)**: Usage credits for AI models with configurable parameters
+- **AAT (ERC1155)**: AI Access Tokens for AI models with configurable parameters
 - **Custodial System**: Owner-controlled transfers and trades for platform management
-- **Dual Fee Modes**: Pay fees in native tokens (TokenAI) or in-kind (LLMBits)
+- **Dual Fee Modes**: Pay fees in native tokens (TokenAI) or in-kind (AAT)
 - **Expirable Tokens**: Automatic token expiration with burn-and-remint functionality
 - **Trading System**: Token-to-token trading with flexible fee structures
 - **Security Features**: Reentrancy protection, pausable functions, role-based access
@@ -20,7 +20,7 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
 - **Symbol**: TAI (mainnet) / tTAI (testnet)
 - **Supply**: Dynamic (minted as needed)
 
-### LLMBits Contract  
+### AAT Contract  
 - **Standard**: ERC1155 with custom extensions
 - **Token Types**: Configurable by model, scope, expiration, tradability
 - **Operations**: Mint, transfer, trade, batch operations
@@ -66,9 +66,9 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
    TREASURY_ADDRESS=0xYourTokenAIAddress
    ```
 
-3. **Deploy LLMBits**
+3. **Deploy AAT**
    ```bash
-   forge script script/DeployLLMBits.s.sol:DeployLLMBitsTestnet \
+   forge script script/DeployAAT.s.sol:DeployAATTestnet \
      --rpc-url $BNB_TESTNET_RPC_URL --broadcast --verify
    ```
 
@@ -76,7 +76,7 @@ A decentralized AI platform built on BNB Smart Chain featuring ERC20 platform to
 
 Use the same process with mainnet scripts:
 - `DeployTokenAI.s.sol:DeployTokenAI`
-- `DeployLLMBits.s.sol:DeployLLMBits`
+- `DeployAAT.s.sol:DeployAAT`
 
 ## 🧪 Testing
 
@@ -88,7 +88,7 @@ forge test
 
 # Run specific test files
 forge test --match-path test/TokenAI.t.sol
-forge test --match-path test/LLMBits.t.sol
+forge test --match-path test/AAT.t.sol
 forge test --match-path test/Integration.t.sol
 forge test --match-path test/EdgeCases.t.sol
 ```
@@ -119,11 +119,11 @@ forge script script/TestTrading.s.sol:TestTrading \
 
 ### BNB Smart Chain Testnet
 - **TokenAI**: `0x25d8d91C2C85d47b76Ab7868588F92B5933e1213`
-- **LLMBits**: `0x5A270fC84b879F91469b755991f4452A13d505D9`
+- **AAT**: `0x5A270fC84b879F91469b755991f4452A13d505D9`
 
 ### Verification Links
 - [TokenAI on BSCScan Testnet](https://testnet.bscscan.com/address/0x25d8d91c2c85d47b76ab7868588f92b5933e1213)
-- [LLMBits on BSCScan Testnet](https://testnet.bscscan.com/address/0x5a270fc84b879f91469b755991f4452a13d505d9)
+- [AAT on BSCScan Testnet](https://testnet.bscscan.com/address/0x5a270fc84b879f91469b755991f4452a13d505d9)
 
 ## 🔧 Configuration
 
@@ -139,7 +139,7 @@ BSCSCAN_API_KEY=YourBSCScanAPIKey
 # Contract Addresses
 TREASURY_ADDRESS=0xTokenAIAddress
 TOKEN_AI_ADDRESS=0xTokenAIAddress  
-LLM_BITS_ADDRESS=0xLLMBitsAddress
+AAT_ADDRESS=0xAATAddress
 
 # Testing
 TEST_ACCOUNT_1_ADDRESS=0xTestAddress1
