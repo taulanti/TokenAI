@@ -8,12 +8,11 @@ import {TokenAI} from "../src/TokenAI.sol";
 /**
  * @title TestTransfers
  * @dev Script to test transfer functionality including batch transfers
- * 
+ *
  * Usage:
  * forge script script/TestTransfers.s.sol:TestTransfers --rpc-url $BNB_TESTNET_RPC_URL --broadcast
  */
 contract TestTransfers is Script {
-    
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
@@ -21,126 +20,115 @@ contract TestTransfers is Script {
         address tokenAiAddress = vm.envAddress("TOKEN_AI_ADDRESS");
         address testAccount1 = vm.envAddress("TEST_ACCOUNT_1_ADDRESS");
         address testAccount2 = vm.envAddress("TEST_ACCOUNT_2_ADDRESS");
-        
+
         AAT aat = AAT(aatAddress);
         TokenAI tokenAI = TokenAI(tokenAiAddress);
-        
+
         console.log("Testing transfer functionality...");
-        
+
         // Get token IDs
         uint256 gptAiCourseId = _computeTokenId("gpt-4", "ai-course-101", uint64(block.timestamp + 90 days));
         uint256 claudeMlCourseId = _computeTokenId("claude-3", "ml-course-201", uint64(block.timestamp + 60 days));
         uint256 nonTradableId = _computeTokenId("gpt-3.5", "private-session", uint64(block.timestamp + 30 days), false);
-        
+
         vm.startBroadcast(deployerPrivateKey);
-        
+
         console.log("\n=== BEFORE TRANSFERS ===");
         _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
-        
+
         // Test 1: Simple transfer with native fee
         console.log("\n=== TEST 1: SIMPLE TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 50 GPT-4 AI Course tokens from Account 1 to Account 2");
         console.log("Fee: 5 tTAI");
-        
+
         aat.transfer(
             testAccount1,
             testAccount2,
             gptAiCourseId,
-            50,              // amount
-            5 * 10**18       // 5 tTAI native fee
+            50, // amount
+            5 * 10 ** 18 // 5 tTAI native fee
         );
-        
+
         console.log("\n=== AFTER TRANSFER 1 ===");
         _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
-        
+
         // Test 2: Transfer with native fee only
         console.log("\n=== TEST 2: TRANSFER WITH NATIVE FEE ===");
         console.log("Transfer 25 Claude ML tokens from Account 1 to Account 2");
         console.log("Fee: 2 tTAI");
-        
+
         aat.transfer(
             testAccount1,
             testAccount2,
             claudeMlCourseId,
-            25,              // amount
-            2 * 10**18       // 2 tTAI native fee
+            25, // amount
+            2 * 10 ** 18 // 2 tTAI native fee
         );
-        
+
         console.log("\n=== AFTER TRANSFER 2 ===");
         _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
-        
+
         // Test 3: Batch transfer
         console.log("\n=== TEST 3: BATCH TRANSFER ===");
         console.log("Batch transfer from Account 1 to multiple recipients");
-        
+
         address[] memory recipients = new address[](2);
         recipients[0] = testAccount2;
         recipients[1] = deployer;
-        
+
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 20; // 20 to Account 2
         amounts[1] = 10; // 10 to deployer
-        
+
         uint256[] memory feesNative = new uint256[](2);
-        feesNative[0] = 2 * 10**18; // 2 tTAI fee for Account 2 transfer
-        feesNative[1] = 1 * 10**18; // 1 tTAI fee for deployer transfer
-        
-        aat.batchTransfer(
-            testAccount1,
-            recipients,
-            gptAiCourseId,
-            amounts,
-            feesNative
-        );
-        
+        feesNative[0] = 2 * 10 ** 18; // 2 tTAI fee for Account 2 transfer
+        feesNative[1] = 1 * 10 ** 18; // 1 tTAI fee for deployer transfer
+
+        aat.batchTransfer(testAccount1, recipients, gptAiCourseId, amounts, feesNative);
+
         console.log("\n=== AFTER BATCH TRANSFER ===");
         _displayBalances(aat, tokenAI, testAccount1, testAccount2, gptAiCourseId, claudeMlCourseId);
         console.log("Deployer GPT-4 AI Course balance:", aat.balanceOf(deployer, gptAiCourseId));
-        
+
         // Test 4: Try to transfer non-tradable token (should fail from non-origin pool)
         console.log("\n=== TEST 4: NON-TRADABLE TOKEN TRANSFER (SHOULD FAIL) ===");
         console.log("Attempting to transfer non-tradable token from Account 2 (should fail)");
-        
-        try aat.transfer(
-            testAccount2,
-            testAccount1,
-            nonTradableId,
-            10,
-            0
-        ) {
+
+        try aat.transfer(testAccount2, testAccount1, nonTradableId, 10, 0) {
             console.log("ERROR: Non-tradable transfer succeeded (should have failed)");
         } catch {
             console.log("SUCCESS: Non-tradable transfer correctly failed");
         }
-        
+
         // Test 5: Origin pool can transfer non-tradable tokens
         console.log("\n=== TEST 5: ORIGIN POOL TRANSFER OF NON-TRADABLE ===");
         console.log("Origin pool transfers non-tradable tokens (should succeed)");
-        
+
         // First, transfer some non-tradable tokens to origin pool
-        uint256 instructorPoolId = _computeTokenId("claude-3", "instructor-pool", uint64(block.timestamp + 180 days), false);
-        
+        uint256 instructorPoolId =
+            _computeTokenId("claude-3", "instructor-pool", uint64(block.timestamp + 180 days), false);
+
         aat.transfer(
-            deployer,        // from origin pool
-            testAccount1,    // to Account 1
+            deployer, // from origin pool
+            testAccount1, // to Account 1
             instructorPoolId,
-            50,              // amount
-            0                // no native fee
+            50, // amount
+            0 // no native fee
         );
-        
+
         console.log("Transferred 50 instructor pool tokens to Account 1");
         console.log("Account 1 instructor pool balance:", aat.balanceOf(testAccount1, instructorPoolId));
-        
+
         vm.stopBroadcast();
-        
+
         // Final summary
         console.log("\n=== FINAL TREASURY SUMMARY ===");
         address treasury = aat.treasury();
-        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10**18, "tTAI");
+        console.log("Treasury TokenAI Balance:", tokenAI.balanceOf(treasury) / 10 ** 18, "tTAI");
         console.log("Treasury GPT-4 AI Course tokens:", aat.balanceOf(treasury, gptAiCourseId));
         console.log("Treasury Claude ML tokens:", aat.balanceOf(treasury, claudeMlCourseId));
     }
-    
+
     function _displayBalances(
         AAT aat,
         TokenAI tokenAI,
@@ -150,30 +138,38 @@ contract TestTransfers is Script {
         uint256 tokenId2
     ) internal view {
         console.log("Account 1:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10**18, "tTAI");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account1) / 10 ** 18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", aat.balanceOf(account1, tokenId1));
         console.log("  - Claude ML Course tokens:", aat.balanceOf(account1, tokenId2));
-        
+
         console.log("Account 2:");
-        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10**18, "tTAI");
+        console.log("  - TokenAI:", tokenAI.balanceOf(account2) / 10 ** 18, "tTAI");
         console.log("  - GPT-4 AI Course tokens:", aat.balanceOf(account2, tokenId1));
         console.log("  - Claude ML Course tokens:", aat.balanceOf(account2, tokenId2));
     }
-    
+
     function _computeTokenId(bytes16 model, bytes16 scope, uint64 expiration) internal view returns (uint256) {
         return _computeTokenId(model, scope, expiration, true);
     }
-    
-    function _computeTokenId(bytes16 model, bytes16 scope, uint64 expiration, bool tradable) internal view returns (uint256) {
+
+    function _computeTokenId(bytes16 model, bytes16 scope, uint64 expiration, bool tradable)
+        internal
+        view
+        returns (uint256)
+    {
         address deployer = vm.addr(vm.envUint("PRIVATE_KEY"));
-        return uint256(keccak256(abi.encode(
-            keccak256("LLMBits.v1"),
-            model,
-            scope,
-            expiration,
-            deployer, // origin pool
-            true,     // reclaimable
-            tradable  // tradable
-        )));
+        return uint256(
+            keccak256(
+                abi.encode(
+                    keccak256("LLMBits.v1"),
+                    model,
+                    scope,
+                    expiration,
+                    deployer, // origin pool
+                    true, // reclaimable
+                    tradable // tradable
+                )
+            )
+        );
     }
 }

@@ -68,12 +68,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     error TokenAlreadyExists();
     error TokenNotTradable();
     error TokenNotExpired();
-    error InsufficientBalance(
-        address from,
-        uint256 tokenId,
-        uint256 required,
-        uint256 available
-    );
+    error InsufficientBalance(address from, uint256 tokenId, uint256 required, uint256 available);
     error TokenExpired();
     error InvalidExpiration();
     error ArrayLengthMismatch();
@@ -102,20 +97,12 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     event TreasurySet(address treasury);
 
     event FeeAppliedNative(
-        address indexed partyA,
-        address indexed partyB,
-        uint256 feeANative,
-        uint256 feeBNative,
-        address indexed treasury
+        address indexed partyA, address indexed partyB, uint256 feeANative, uint256 feeBNative, address indexed treasury
     );
-
 
     /*──────────────────────── Constructor ─────────────────────────*/
 
-    constructor(
-        string memory _baseUri,
-        address _tokenAi
-    ) ERC1155("") Ownable(msg.sender) {
+    constructor(string memory _baseUri, address _tokenAi) ERC1155("") Ownable(msg.sender) {
         baseUri = _baseUri;
         treasury = owner();
         if (_tokenAi != address(0)) {
@@ -129,6 +116,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     function pause() external onlyOwner {
         _pause();
     }
+
     function unpause() external onlyOwner {
         _unpause();
     }
@@ -153,8 +141,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     /*───────────────────────── Metadata ───────────────────────────*/
 
     function uri(uint256 tokenId) public view override returns (string memory) {
-        return
-            string(abi.encodePacked(baseUri, tokenId.toHexString(32), ".json"));
+        return string(abi.encodePacked(baseUri, tokenId.toHexString(32), ".json"));
     }
 
     /*──────────────────── TokenId derivation ──────────────────────*/
@@ -168,20 +155,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         bool tradable
     ) public pure returns (uint256 tokenId) {
         // Use abi.encode and a domain salt to keep determinism across future schema changes
-        return
-            uint256(
-                keccak256(
-                    abi.encode(
-                        _ID_DOMAIN,
-                        originPool,
-                        model,
-                        scope,
-                        expiration,
-                        reclaimable,
-                        tradable
-                    )
-                )
-            );
+        return uint256(keccak256(abi.encode(_ID_DOMAIN, originPool, model, scope, expiration, reclaimable, tradable)));
     }
 
     /*─────────────────────────── Views ────────────────────────────*/
@@ -192,9 +166,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         return (cfg.expiration != 0 && block.timestamp >= cfg.expiration);
     }
 
-    function getConfig(
-        uint256 tokenId
-    ) external view returns (TokenConfigs memory config) {
+    function getConfig(uint256 tokenId) external view returns (TokenConfigs memory config) {
         config = tokenConfigs[tokenId];
         if (config.originPool == address(0)) revert UnknownTokenId(tokenId);
     }
@@ -211,17 +183,11 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         bool tradable,
         uint256 amount
     ) internal returns (uint256 tokenId) {
-        if (recipient == address(0) || originPool == address(0))
+        if (recipient == address(0) || originPool == address(0)) {
             revert ZeroAddress();
+        }
 
-        tokenId = computeTokenId(
-            originPool,
-            model,
-            scope,
-            expiration,
-            reclaimable,
-            tradable
-        );
+        tokenId = computeTokenId(originPool, model, scope, expiration, reclaimable, tradable);
         TokenConfigs memory cfg = tokenConfigs[tokenId];
 
         if (cfg.originPool == address(0)) {
@@ -236,27 +202,13 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         } else {
             // Redundant in practice since tokenId encodes all fields, but keep as a guard for integrity.
             if (
-                cfg.model != model ||
-                cfg.scope != scope ||
-                cfg.expiration != expiration ||
-                cfg.originPool != originPool ||
-                cfg.reclaimable != reclaimable ||
-                cfg.tradable != tradable
+                cfg.model != model || cfg.scope != scope || cfg.expiration != expiration || cfg.originPool != originPool
+                    || cfg.reclaimable != reclaimable || cfg.tradable != tradable
             ) revert ConfigMismatch();
         }
 
         _mint(recipient, tokenId, amount, "");
-        emit TokenMinted(
-            recipient,
-            tokenId,
-            amount,
-            model,
-            scope,
-            expiration,
-            originPool,
-            reclaimable,
-            tradable
-        );
+        emit TokenMinted(recipient, tokenId, amount, model, scope, expiration, originPool, reclaimable, tradable);
     }
 
     function mintToAddress(
@@ -270,16 +222,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         uint256 amount
     ) external onlyOwner whenNotPaused nonReentrant returns (uint256 tokenId) {
         if (amount == 0) revert InsufficientBalance(address(0), 0, 1, 0);
-        tokenId = _mintTo(
-            recipient,
-            originPool,
-            model,
-            scope,
-            expiration,
-            reclaimable,
-            tradable,
-            amount
-        );
+        tokenId = _mintTo(recipient, originPool, model, scope, expiration, reclaimable, tradable, amount);
     }
 
     /*───────────────────────── Transfers ──────────────────────────*/
@@ -287,32 +230,27 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     function _validateTransferRules(address from, uint256 id) private view {
         TokenConfigs memory cfg = tokenConfigs[id];
         if (cfg.originPool == address(0)) revert UnknownTokenId(id);
-        if (cfg.expiration != 0 && block.timestamp >= cfg.expiration)
+        if (cfg.expiration != 0 && block.timestamp >= cfg.expiration) {
             revert TokenExpired();
+        }
 
         bool allowed = cfg.tradable || (from == cfg.originPool);
         if (!allowed) revert TokenNotTradable();
     }
 
-    function _singleTransfer(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amt
-    ) private {
+    function _singleTransfer(address from, address to, uint256 id, uint256 amt) private {
         if (to == address(0)) revert ZeroAddress();
         uint256 bal = balanceOf(from, id);
         if (bal < amt) revert InsufficientBalance(from, id, amt, bal);
         _safeTransferFrom(from, to, id, amt, "");
     }
 
-    function transfer(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        uint256 feeNative
-    ) external onlyOwner whenNotPaused nonReentrant {
+    function transfer(address from, address to, uint256 id, uint256 amount, uint256 feeNative)
+        external
+        onlyOwner
+        whenNotPaused
+        nonReentrant
+    {
         _validateTransferRules(from, id);
 
         uint256 bal = balanceOf(from, id);
@@ -321,13 +259,9 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         // Native fee (TokenAI)
         if (feeNative > 0) {
             if (address(tokenAi) == address(0)) revert ZeroAddress();
-            if (tokenAi.balanceOf(from) < feeNative)
-                revert InsufficientBalance(
-                    from,
-                    0,
-                    feeNative,
-                    tokenAi.balanceOf(from)
-                );
+            if (tokenAi.balanceOf(from) < feeNative) {
+                revert InsufficientBalance(from, 0, feeNative, tokenAi.balanceOf(from));
+            }
             tokenAi.burnFrom(from, feeNative);
             tokenAi.mint(treasury, feeNative);
             emit FeeAppliedNative(from, address(0), feeNative, 0, treasury);
@@ -335,10 +269,6 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
 
         _singleTransfer(from, to, id, amount);
     }
-
-    
-
-    
 
     function batchTransfer(
         address from,
@@ -348,18 +278,14 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         uint256[] calldata feesNative
     ) external onlyOwner whenNotPaused nonReentrant {
         uint256 len = recipients.length;
-        if (
-            len == 0 ||
-            amounts.length != len ||
-            feesNative.length != len
-        ) revert ArrayLengthMismatch();
+        if (len == 0 || amounts.length != len || feesNative.length != len) revert ArrayLengthMismatch();
 
         _validateTransferRules(from, id);
 
         uint256 totalAmount;
         uint256 totalFeeNative;
 
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             if (recipients[i] == address(0)) revert ZeroAddress();
             totalAmount += amounts[i];
             totalFeeNative += feesNative[i];
@@ -374,19 +300,15 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         // Handle native fees in batch
         if (totalFeeNative > 0) {
             if (address(tokenAi) == address(0)) revert ZeroAddress();
-            if (tokenAi.balanceOf(from) < totalFeeNative)
-                revert InsufficientBalance(
-                    from,
-                    0,
-                    totalFeeNative,
-                    tokenAi.balanceOf(from)
-                );
+            if (tokenAi.balanceOf(from) < totalFeeNative) {
+                revert InsufficientBalance(from, 0, totalFeeNative, tokenAi.balanceOf(from));
+            }
             tokenAi.burnFrom(from, totalFeeNative);
             tokenAi.mint(treasury, totalFeeNative);
         }
 
         // Perform actual transfers
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             _safeTransferFrom(from, recipients[i], id, amounts[i], "");
             unchecked {
                 ++i;
@@ -395,23 +317,13 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
 
         // Emit consolidated events
         if (totalFeeNative > 0) {
-            emit FeeAppliedNative(
-                from,
-                address(0),
-                totalFeeNative,
-                0,
-                treasury
-            );
+            emit FeeAppliedNative(from, address(0), totalFeeNative, 0, treasury);
         }
     }
 
     /*────────────────────────── Trading ───────────────────────────*/
 
-    function _validateMatchMask(
-        TokenConfigs memory A,
-        TokenConfigs memory B,
-        uint8 policyMask
-    ) internal pure {
+    function _validateMatchMask(TokenConfigs memory A, TokenConfigs memory B, uint8 policyMask) internal pure {
         if (policyMask == 0) return;
         uint8 diff;
         if (A.model != B.model) diff |= MATCH_MODEL;
@@ -468,22 +380,19 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         _validateMatchMask(cfgA, cfgB, matchMask);
     }
 
-    function _processNativeFees(
-        address partyA,
-        uint256 feeANative,
-        address partyB,
-        uint256 feeBNative
-    ) internal {
+    function _processNativeFees(address partyA, uint256 feeANative, address partyB, uint256 feeBNative) internal {
         if (feeANative > 0) {
             if (address(tokenAi) == address(0)) revert ZeroAddress();
-            if (tokenAi.balanceOf(partyA) < feeANative)
+            if (tokenAi.balanceOf(partyA) < feeANative) {
                 revert InsufficientBalance(partyA, 0, feeANative, tokenAi.balanceOf(partyA));
+            }
             tokenAi.burnFrom(partyA, feeANative);
         }
         if (feeBNative > 0) {
             if (address(tokenAi) == address(0)) revert ZeroAddress();
-            if (tokenAi.balanceOf(partyB) < feeBNative)
+            if (tokenAi.balanceOf(partyB) < feeBNative) {
                 revert InsufficientBalance(partyB, 0, feeBNative, tokenAi.balanceOf(partyB));
+            }
             tokenAi.burnFrom(partyB, feeBNative);
         }
 
@@ -493,33 +402,31 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-
     /*──────────────────────── Burn & Remint ───────────────────────*/
 
-    function burnAndRemintExpired(
-        address holder,
-        uint256 oldId,
-        uint64 newExpiration
-    ) external onlyOwner whenNotPaused nonReentrant returns (uint256 newId) {
+    function burnAndRemintExpired(address holder, uint256 oldId, uint64 newExpiration)
+        external
+        onlyOwner
+        whenNotPaused
+        nonReentrant
+        returns (uint256 newId)
+    {
         if (holder == address(0)) revert ZeroAddress();
-        if (newExpiration <= uint64(block.timestamp))
+        if (newExpiration <= uint64(block.timestamp)) {
             revert InvalidExpiration();
+        }
 
         TokenConfigs memory oldCfg = tokenConfigs[oldId];
         if (oldCfg.originPool == address(0)) revert UnknownTokenId(oldId);
-        if (oldCfg.expiration == 0 || block.timestamp < oldCfg.expiration)
+        if (oldCfg.expiration == 0 || block.timestamp < oldCfg.expiration) {
             revert TokenNotExpired();
+        }
 
         uint256 bal = balanceOf(holder, oldId);
         if (bal == 0) revert NoTokensToReclaim();
 
         newId = computeTokenId(
-            oldCfg.originPool,
-            oldCfg.model,
-            oldCfg.scope,
-            newExpiration,
-            oldCfg.reclaimable,
-            oldCfg.tradable
+            oldCfg.originPool, oldCfg.model, oldCfg.scope, newExpiration, oldCfg.reclaimable, oldCfg.tradable
         );
 
         tokenConfigs[newId] = TokenConfigs({
@@ -549,29 +456,23 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
 
     /*────────────── Lock down standard 1155 approvals ─────────────*/
 
-    function setApprovalForAll(
-        address /*operator*/,
-        bool /*approved*/
-    ) public pure override {
+    function setApprovalForAll(address, /*operator*/ bool /*approved*/ ) public pure override {
         revert ApprovalsDisabled();
     }
 
-    function isApprovedForAll(
-        address /*account*/,
-        address /*operator*/
-    ) public pure override returns (bool) {
+    function isApprovedForAll(address, /*account*/ address /*operator*/ ) public pure override returns (bool) {
         return false;
     }
 
     /*────────────── Owner-only transfer entrypoints ───────────────*/
 
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override onlyOwner whenNotPaused {
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data)
+        public
+        virtual
+        override
+        onlyOwner
+        whenNotPaused
+    {
         _validateTransferRules(from, id);
 
         super.safeTransferFrom(from, to, id, amount, data);
@@ -586,7 +487,7 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
     ) public virtual override onlyOwner whenNotPaused {
         if (to == address(0)) revert ZeroAddress();
 
-        for (uint256 i; i < ids.length; ) {
+        for (uint256 i; i < ids.length;) {
             _validateTransferRules(from, ids[i]);
             unchecked {
                 ++i;
@@ -597,18 +498,14 @@ contract AAT is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard, Pausable {
 
     /*────────────────────── Internal Overrides ────────────────────*/
 
-    function _update(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory values
-    ) internal override(ERC1155, ERC1155Supply) {
+    function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
+        internal
+        override(ERC1155, ERC1155Supply)
+    {
         super._update(from, to, ids, values);
     }
 
-    function supportsInterface(
-        bytes4 id
-    ) public view virtual override(ERC1155) returns (bool) {
+    function supportsInterface(bytes4 id) public view virtual override(ERC1155) returns (bool) {
         return super.supportsInterface(id);
     }
 }
