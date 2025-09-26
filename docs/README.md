@@ -8,6 +8,12 @@ permalink: /whitepaper/
 
 ## AI Access as a Transferable Asset
 
+**Authors:**  
+**Taulant Mehmeti** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/taulantmehmeti)  
+**Gëzim Basha** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/gezimbasha)
+
+---
+
 ## Abstract
 
 What if access to AI wasn't locked behind a credit card, but could be minted, gifted, traded, or scoped like a digital asset? This project proposes a new standard for how people, institutions, and agents interact with AI models — not by replacing the models themselves, but by transforming access into a programmable and transferable token.
