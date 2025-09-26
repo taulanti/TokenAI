@@ -1,0 +1,34 @@
+title: AI Access Protocol
+description: Tokenizing AI Access - Making intelligence truly liquid, accessible, and composable
+url: https://taulanti.github.io
+baseurl: /TokenAI
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# GitHub Pages settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+header_pages:
+  - README.md
+
+# SEO and social
+author: AI Access Protocol Team
+twitter:
+  username: # Add Twitter handle if available
+social:
+  name: AI Access Protocol
+  links:
+    - https://github.com/taulanti/TokenAI
+
+# Exclude files from build
+exclude:
+  - "*.pdf"
+  - node_modules
+  - vendor
