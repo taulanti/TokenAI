@@ -16,7 +16,14 @@ plugins:
 
 # Navigation
 header_pages:
+  - index.md
   - README.md
+
+# Jekyll settings
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
 
 # SEO and social
 author: AI Access Protocol Team

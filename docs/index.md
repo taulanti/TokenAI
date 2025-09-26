@@ -11,7 +11,7 @@ Welcome to the AI Access Protocol documentation. This protocol transforms AI acc
 
 ## Quick Navigation
 
-- [**Read the Whitepaper**](README.md) - Complete technical and economic overview
+- [**Read the Whitepaper**](whitepaper/) - Complete technical and economic overview
 - [**View Contracts**](https://testnet.bscscan.com/address/0x25d8d91c2c85d47b76ab7868588f92b5933e1213) - Deployed smart contracts
 - [**GitHub Repository**](https://github.com/taulanti/TokenAI) - Source code and development
 

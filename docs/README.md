@@ -1,3 +1,9 @@
+---
+layout: default
+title: Whitepaper
+permalink: /whitepaper/
+---
+
 # Tokenizing AI Access
 
 ## AI Access as a Transferable Asset
